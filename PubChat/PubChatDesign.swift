@@ -1,89 +1,76 @@
 import SwiftUI
 
-/// PubChat visual baseline — 2026-10-18.
-/// Semantic palette shared with Android MaterialTheme and Web --ui-* tokens.
+/// Shared visual contract of the 18 October PubChat mobile design boards.
+/// Functional capabilities are still controlled by the backend and feature flags.
 enum PubChatDesign {
-    static let primary = Color(red: 99/255, green: 71/255, blue: 245/255)
-    static let primaryDark = Color(red: 154/255, green: 134/255, blue: 255/255)
-    static let cyan = Color(red: 18/255, green: 188/255, blue: 213/255)
-    static let background = Color(red: 246/255, green: 247/255, blue: 255/255)
-    static let darkBackground = Color(red: 13/255, green: 17/255, blue: 37/255)
-    static let textSecondary = Color(red: 105/255, green: 115/255, blue: 143/255)
-    static let danger = Color(red: 223/255, green: 75/255, blue: 100/255)
-
-    static let heroGradient = LinearGradient(
-        colors: [
-            Color(red: 113/255, green: 73/255, blue: 255/255),
-            Color(red: 77/255, green: 84/255, blue: 247/255)
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+    static let primary = Color(red: 96/255, green: 69/255, blue: 246/255)
+    static let deepIndigo = Color(red: 52/255, green: 33/255, blue: 164/255)
+    static let cyan = Color(red: 6/255, green: 199/255, blue: 236/255)
+    static let background = Color(red: 247/255, green: 248/255, blue: 254/255)
+    static let ink = Color(red: 17/255, green: 25/255, blue: 54/255)
+    static let secondaryInk = Color(red: 100/255, green: 113/255, blue: 142/255)
+    static let border = Color(red: 231/255, green: 234/255, blue: 246/255)
+    static let danger = Color(red: 240/255, green: 68/255, blue: 97/255)
+    static let success = Color(red: 22/255, green: 164/255, blue: 108/255)
+    static let darkBackground = Color(red: 15/255, green: 20/255, blue: 38/255)
+    static let darkSurface = Color(red: 25/255, green: 31/255, blue: 53/255)
+    static let brandGradient = LinearGradient(
+        colors: [primary, Color(red: 125/255, green: 93/255, blue: 255/255), cyan],
+        startPoint: .topLeading, endPoint: .bottomTrailing
     )
 }
 
-struct PubChatPrimaryButton: View {
-    let title: String
-    let isLoading: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                if isLoading { ProgressView().tint(.white) }
-                Text(title).font(.headline)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 48)
-            .foregroundStyle(.white)
-            .background(PubChatDesign.heroGradient, in: RoundedRectangle(cornerRadius: 14))
-        }
-        .disabled(isLoading)
-        .accessibilityLabel(isLoading ? "\(title), загрузка" : title)
-    }
-}
-
-struct PubChatLoadingPlaceholder: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ForEach(0..<4, id: \.self) { _ in
-                HStack(spacing: 14) {
-                    Circle().fill(.quaternary).frame(width: 48, height: 48)
-                    VStack(alignment: .leading, spacing: 8) {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(.quaternary).frame(height: 13)
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(.quaternary).frame(width: 160, height: 11)
-                    }
-                }
-                .accessibilityHidden(true)
-            }
-        }
-        .padding(20)
-        .accessibilityLabel("Загрузка данных")
-    }
-}
-
-struct PubChatEmptyView: View {
-    let title: String
-    let details: String
-    let systemImage: String
-
-    var body: some View {
-        ContentUnavailableView(title, systemImage: systemImage, description: Text(details))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-struct PubChatBrandMark: View {
+struct PubChatLoadingView: View {
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 22)
-                .fill(PubChatDesign.heroGradient)
-            Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.system(size: 36, weight: .semibold))
-                .foregroundStyle(.white)
+            PubChatDesign.background.ignoresSafeArea()
+            VStack(spacing: 20) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 26)
+                        .fill(PubChatDesign.brandGradient)
+                        .frame(width: 92, height: 92)
+                    Text("P").font(.system(size: 54, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                Text("PubChat").font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundStyle(PubChatDesign.ink)
+                Text("Люди. Сообщества. Больше возможностей.")
+                    .font(.subheadline).foregroundStyle(PubChatDesign.secondaryInk)
+                    .multilineTextAlignment(.center)
+                ProgressView("Восстанавливаем сеанс…")
+                    .tint(PubChatDesign.primary)
+                    .padding(.top, 12)
+            }
+            .padding(28)
         }
-        .frame(width: 88, height: 88)
-        .accessibilityLabel("PubChat")
+    }
+}
+
+struct PubChatStateCard: View {
+    let symbol: String
+    let title: String
+    let message: String
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: symbol)
+                .font(.system(size: 42, weight: .light))
+                .foregroundStyle(PubChatDesign.primary)
+                .frame(width: 86, height: 86)
+                .background(PubChatDesign.primary.opacity(0.08), in: Circle())
+            Text(title).font(.title3.bold()).foregroundStyle(PubChatDesign.ink)
+            Text(message).font(.subheadline).foregroundStyle(PubChatDesign.secondaryInk)
+                .multilineTextAlignment(.center)
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.borderedProminent).tint(PubChatDesign.primary)
+                    .frame(minHeight: 44)
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(.white, in: RoundedRectangle(cornerRadius: 22))
     }
 }
