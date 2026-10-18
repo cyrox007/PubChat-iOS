@@ -14,7 +14,10 @@ Android-клиент: [cyrox007/PubChat-Android](https://github.com/cyrox007/Pub
 - Identity v2: login, register, session refresh, me, logout;
 - Device UUID и CSRF cookie/header proof для HTTP API;
 - Access/refresh session material хранится в iOS Keychain;
-- просмотр основных сведений Persona, read-only каталоги Spaces и People;
+- просмотр основных сведений Persona, каталог Spaces и People;
+- Social Core 0.7 (первый срез): профиль другого человека, подписка/отписка,
+  запрос/принятие/отклонение/отмена дружбы, блокировка/разблокировка;
+  права и ограничения вычисляет backend `/social/v1`, а не SwiftUI;
 - CI на GitHub-hosted `macos-26`: XcodeGen, simulator build, XCTest без подписи;
 - базовые тесты контракта авторизации и парсинга refresh cookie.
 
