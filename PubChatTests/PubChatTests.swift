@@ -98,6 +98,30 @@ final class PubChatTests: XCTestCase {
         XCTAssertEqual(dictionary, ["action": "accept"])
     }
 
+    func testSessionScopedPersonaListDecodes() throws {
+        let source = """
+        {"status":"ok","active_persona_uid":"persona-b","personas":[
+          {"uid":"persona-a","handle":"original","display_name":"Primary","is_primary":true},
+          {"uid":"persona-b","handle":"alt","display_name":"Secondary","is_primary":false}]}
+        """
+        let parsed = try JSONDecoder().decode(PersonaListEnvelope.self, from: Data(source.utf8))
+        XCTAssertEqual(parsed.personas.count, 2)
+        XCTAssertEqual(parsed.activePersonaUid, "persona-b")
+        XCTAssertEqual(parsed.personas[0].isPrimary, true)
+        XCTAssertEqual(parsed.personas[1].isPrimary, false)
+    }
+
+    func testPersonaCreationDoesNotSupplyAccountPrivilegeFields() throws {
+        let data = try JSONEncoder().encode(PersonaCreatePayload(
+            handle: "alt", displayName: "Another"
+        ))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: String])
+        XCTAssertEqual(json["handle"], "alt")
+        XCTAssertEqual(json["display_name"], "Another")
+        XCTAssertNil(json["account_uid"])
+        XCTAssertNil(json["is_primary"])
+    }
+
     func testServerAccessRestrictionDoesNotBecomeAFalseBadPasswordMessage() {
         let problem = APIProblem(status: 403, reason: "account_access_restricted")
         XCTAssertTrue((problem.errorDescription ?? "").contains("account_access_restricted"))

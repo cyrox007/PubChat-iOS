@@ -93,6 +93,32 @@ final class PubChatAPI {
         return result.relationship
     }
 
+    func personas(accessToken: String) async throws -> PersonaListEnvelope {
+        let (result, _): (PersonaListEnvelope, String?) =
+            try await request("GET", "/identity/v2/personas", accessToken: accessToken)
+        return result
+    }
+
+    func createPersona(
+        handle: String, displayName: String, accessToken: String
+    ) async throws -> IdentityEnvelope.Persona {
+        let body = try JSONEncoder().encode(PersonaCreatePayload(handle: handle, displayName: displayName))
+        let (result, _): (CreatePersonaEnvelope, String?) =
+            try await request("POST", "/identity/v2/personas", body: body, accessToken: accessToken)
+        return result.persona
+    }
+
+    func activatePersona(uid: String, accessToken: String) async throws -> IdentityEnvelope {
+        let (result, _): (IdentityEnvelope, String?) = try await request(
+            "POST", "/identity/v2/personas/\(uid)/activate", accessToken: accessToken
+        )
+        return result
+    }
+
+    private struct CreatePersonaEnvelope: Decodable {
+        let persona: IdentityEnvelope.Persona
+    }
+
     func logout(accessToken: String?, refreshCookie: String?) async throws {
         let _: (StatusEnvelope, String?) = try await request(
             "POST",

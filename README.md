@@ -15,6 +15,9 @@ Android-клиент: [cyrox007/PubChat-Android](https://github.com/cyrox007/Pub
 - Device UUID и CSRF cookie/header proof для HTTP API;
 - Access/refresh session material хранится в iOS Keychain;
 - просмотр основных сведений Persona, каталог Spaces и People;
+- Multi-Persona (приватный первый этап): список/создание до трёх образов и выбор
+  активного для текущей серверной сессии; вторичные образы **не публикуются** в
+  discovery/realtime/DM, не отменяют Account-санкции и не заменяют основной профиль;
 - Social Core 0.7 (первый срез): профиль другого человека, подписка/отписка,
   запрос/принятие/отклонение/отмена дружбы, блокировка/разблокировка;
   права и ограничения вычисляет backend `/social/v1`, а не SwiftUI;

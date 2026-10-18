@@ -31,12 +31,32 @@ struct IdentityEnvelope: Decodable {
         let displayName: String
         let bio: String?
         let socialIntent: String?
+        let isPrimary: Bool?
 
         enum CodingKeys: String, CodingKey {
             case uid, handle, bio
             case displayName = "display_name"
             case socialIntent = "social_intent"
+            case isPrimary = "is_primary"
         }
+    }
+}
+
+struct PersonaListEnvelope: Decodable {
+    let personas: [IdentityEnvelope.Persona]
+    let activePersonaUid: String?
+    enum CodingKeys: String, CodingKey {
+        case personas
+        case activePersonaUid = "active_persona_uid"
+    }
+}
+
+struct PersonaCreatePayload: Encodable {
+    let handle: String
+    let displayName: String
+    enum CodingKeys: String, CodingKey {
+        case handle
+        case displayName = "display_name"
     }
 }
 
