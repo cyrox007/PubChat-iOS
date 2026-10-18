@@ -7,15 +7,15 @@ struct ContentView: View {
         Group {
             switch session.state {
             case .restoring:
-                ProgressView("Восстанавливаем сеанс…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                PubChatLoadingView()
             case .signedOut:
                 AuthenticationView()
             case .signedIn:
                 MainTabsView()
             }
         }
-        .tint(Color(red: 0.58, green: 0.30, blue: 0.75))
+        .tint(PubChatDesign.primary)
+        .background(PubChatDesign.background.ignoresSafeArea())
     }
 }
 
@@ -42,9 +42,19 @@ private struct AuthenticationView: View {
             Form {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("PubChat", systemImage: "bubble.left.and.bubble.right.fill")
-                            .font(.largeTitle.bold())
-                        Text("Общение начинается с твоей Persona.")
+                        HStack(spacing: 14) {
+                            Text("P")
+                                .font(.system(size: 36, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white)
+                                .frame(width: 64, height: 64)
+                                .background(PubChatDesign.brandGradient, in: RoundedRectangle(cornerRadius: 19))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("PubChat").font(.system(size: 30, weight: .bold, design: .rounded))
+                                Text("Больше, чем чат.").font(.subheadline)
+                                    .foregroundStyle(PubChatDesign.secondaryInk)
+                            }
+                        }
+                        Text("Люди. Сообщества. Возможности.")
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 12)
@@ -139,13 +149,13 @@ private struct MainTabsView: View {
                 }
                 .overlay {
                     if session.spaces.isEmpty && !session.isLoadingDirectory {
-                        ContentUnavailableView("Пока нет пространств", systemImage: "bubble.left.and.bubble.right")
+                        PubChatStateCard(symbol: "square.grid.2x2", title: "Пока нет пространств", message: "Здесь появятся доступные сообщества. Обновите каталог.")
                     }
                 }
                 .refreshable { await session.reloadDirectory() }
                 .navigationTitle("Пространства")
             }
-            .tabItem { Label("Spaces", systemImage: "square.grid.2x2.fill") }
+            .tabItem { Label("Пространства", systemImage: "square.grid.2x2.fill") }
 
             NavigationStack {
                 SocialDiscoveryView()
@@ -199,7 +209,13 @@ private struct MainTabsView: View {
         .task { await session.reloadDirectory() }
         .overlay(alignment: .top) {
             if session.isLoadingDirectory {
-                ProgressView().padding(8)
+                HStack(spacing: 10) {
+                    ProgressView().tint(PubChatDesign.primary)
+                    Text("Обновляем…").font(.caption)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .background(.regularMaterial, in: Capsule())
+                .padding(.top, 6)
             }
         }
     }
