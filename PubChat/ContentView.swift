@@ -148,38 +148,16 @@ private struct MainTabsView: View {
             .tabItem { Label("Spaces", systemImage: "square.grid.2x2.fill") }
 
             NavigationStack {
-                List(session.people) { person in
-                    NavigationLink {
-                        PersonDetailView(person: person)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(person.displayName).font(.headline)
-                            if let handle = person.handle {
-                                Text("@\(handle)").font(.caption).foregroundStyle(.secondary)
-                            }
-                            if let bio = person.bio, !bio.isEmpty {
-                                Text(bio).lineLimit(2)
+                SocialDiscoveryView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            NavigationLink {
+                                FriendshipHubView()
+                            } label: {
+                                Label("Друзья и заявки", systemImage: "person.crop.circle.badge.checkmark")
                             }
                         }
-                        .padding(.vertical, 5)
                     }
-                }
-                .overlay {
-                    if session.people.isEmpty && !session.isLoadingDirectory {
-                        ContentUnavailableView("Люди не найдены", systemImage: "person.2")
-                    }
-                }
-                .refreshable { await session.reloadDirectory() }
-                .navigationTitle("Люди")
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        NavigationLink {
-                            FriendshipHubView()
-                        } label: {
-                            Label("Друзья и заявки", systemImage: "person.crop.circle.badge.checkmark")
-                        }
-                    }
-                }
             }
             .tabItem { Label("Люди", systemImage: "person.2.fill") }
 

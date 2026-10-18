@@ -113,6 +113,30 @@ final class SessionViewModel: ObservableObject {
         return token
     }
 
+    func discoverPeople(
+        query: String, intent: String?, availableNow: Bool, offset: Int = 0
+    ) async throws -> DiscoveryPage {
+        try await api.discover(
+            query: query, intent: intent, availableNow: availableNow,
+            offset: offset, accessToken: socialAccessToken()
+        )
+    }
+
+    func getSocialAvailability() async throws -> SocialAvailability? {
+        try await api.socialAvailability(accessToken: socialAccessToken())
+    }
+
+    func saveSocialAvailability(intent: String, duration: Int, note: String) async throws -> SocialAvailability? {
+        try await api.setSocialAvailability(
+            intent: intent, durationMinutes: duration, note: note,
+            accessToken: socialAccessToken()
+        )
+    }
+
+    func endSocialAvailability() async throws {
+        try await api.clearSocialAvailability(accessToken: socialAccessToken())
+    }
+
     func relationship(accountUid: String) async throws -> Relationship {
         try await api.relationship(accountUid: accountUid, accessToken: socialAccessToken())
     }
