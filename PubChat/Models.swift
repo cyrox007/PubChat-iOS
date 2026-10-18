@@ -133,6 +133,37 @@ struct RelationshipEnvelope: Decodable {
     let relationship: Relationship
 }
 
+
+struct FriendshipRow: Decodable, Identifiable {
+    let accountUid: String
+    let persona: PublicPersona?
+    var id: String { accountUid }
+    var displayName: String { persona?.displayName ?? persona?.handle ?? "Участник PubChat" }
+
+    struct PublicPersona: Decodable {
+        let handle: String?
+        let displayName: String?
+        let avatar: String?
+        enum CodingKeys: String, CodingKey {
+            case handle, avatar
+            case displayName = "display_name"
+        }
+    }
+    enum CodingKeys: String, CodingKey { case accountUid = "account_uid", persona }
+}
+
+struct FriendshipListEnvelope: Decodable {
+    let friends: [FriendshipRow]
+    let pagination: Pagination
+    struct Pagination: Decodable { let total: Int }
+}
+
+struct FriendRequestsEnvelope: Decodable {
+    let requests: [FriendshipRow]
+    let direction: String
+    let pagination: FriendshipListEnvelope.Pagination
+}
+
 struct FriendActionPayload: Encodable {
     let action: String
 }
