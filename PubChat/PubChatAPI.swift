@@ -62,6 +62,57 @@ final class PubChatAPI {
         return result.people
     }
 
+    func discover(
+        query: String = "", intent: String? = nil, availableNow: Bool = false,
+        offset: Int = 0, accessToken: String
+    ) async throws -> DiscoveryPage {
+        var components = URLComponents()
+        var params = [URLQueryItem(name: "limit", value: "30"),
+                      URLQueryItem(name: "offset", value: String(max(0, offset)))]
+        let trimmed = String(query.prefix(80)).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { params.append(URLQueryItem(name: "q", value: trimmed)) }
+        if let intent, ["open", "meet", "games", "friends", "quiet"].contains(intent) {
+            params.append(URLQueryItem(name: "social_intent", value: intent))
+        }
+        if availableNow { params.append(URLQueryItem(name: "available_now", value: "true")) }
+        components.queryItems = params
+        let (result, _): (DiscoveryPage, String?) = try await request(
+            "GET", "/social/v1/discover?" + (components.percentEncodedQuery ?? ""),
+            accessToken: accessToken
+        )
+        return result
+    }
+
+    func socialAvailability(accessToken: String) async throws -> SocialAvailability? {
+        let (result, _): (SocialAvailabilityEnvelope, String?) = try await request(
+            "GET", "/social/v1/availability/me", accessToken: accessToken
+        )
+        return result.availability
+    }
+
+    func setSocialAvailability(
+        intent: String, durationMinutes: Int, note: String, accessToken: String
+    ) async throws -> SocialAvailability? {
+        guard ["open", "meet", "games"].contains(intent), [30, 120, 480].contains(durationMinutes) else {
+            throw APIProblem(status: -1, reason: "Недопустимый статус общения.")
+        }
+        let body = try JSONEncoder().encode(SocialAvailabilityPayload(
+            intent: intent,
+            durationMinutes: durationMinutes,
+            note: String(note.prefix(120)).trimmingCharacters(in: .whitespacesAndNewlines)
+        ))
+        let (result, _): (SocialAvailabilityEnvelope, String?) = try await request(
+            "PUT", "/social/v1/availability/me", body: body, accessToken: accessToken
+        )
+        return result.availability
+    }
+
+    func clearSocialAvailability(accessToken: String) async throws {
+        let _: (SocialAvailabilityEnvelope, String?) = try await request(
+            "DELETE", "/social/v1/availability/me", accessToken: accessToken
+        )
+    }
+
     func relationship(accountUid: String, accessToken: String) async throws -> Relationship {
         let (result, _): (RelationshipEnvelope, String?) =
             try await request("GET", "/social/v1/relationships/\(accountUid)", accessToken: accessToken)
