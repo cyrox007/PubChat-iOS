@@ -76,6 +76,47 @@ struct PeopleEnvelope: Decodable {
     let people: [Person]
 }
 
+struct Relationship: Decodable, Equatable {
+    let accountUid: String
+    let following: Bool
+    let followedBy: Bool
+    let friends: Bool
+    let friendRequest: String?
+    let blockedByMe: Bool
+    let blockedMe: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case following, friends
+        case accountUid = "account_uid"
+        case followedBy = "followed_by"
+        case friendRequest = "friend_request"
+        case blockedByMe = "blocked_by_me"
+        case blockedMe = "blocked_me"
+    }
+
+    var canInteract: Bool { !blockedByMe && !blockedMe }
+    var friendAction: String {
+        if friends || friendRequest == "outgoing" { return "remove" }
+        if friendRequest == "incoming" { return "accept" }
+        return "request"
+    }
+    var friendActionTitle: String {
+        if friends { return "Удалить из друзей" }
+        if friendRequest == "incoming" { return "Принять запрос" }
+        if friendRequest == "outgoing" { return "Отменить запрос" }
+        return "Предложить дружбу"
+    }
+}
+
+struct RelationshipEnvelope: Decodable {
+    let status: String
+    let relationship: Relationship
+}
+
+struct FriendActionPayload: Encodable {
+    let action: String
+}
+
 struct RegisterPayload: Encodable {
     let handle: String
     let displayName: String
