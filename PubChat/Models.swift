@@ -221,6 +221,45 @@ struct LoginPayload: Encodable {
     let password: String
 }
 
+struct NotificationEntry: Decodable, Identifiable {
+    let uid: String
+    let kind: String
+    let title: String
+    let body: String
+    let isRead: Bool
+    let createdAt: String
+    var id: String { uid }
+
+    enum CodingKeys: String, CodingKey {
+        case uid, kind, title, body
+        case isRead = "is_read"
+        case createdAt = "created_at"
+    }
+}
+
+struct NotificationInboxEnvelope: Decodable {
+    let notifications: [NotificationEntry]
+    let unread: Int
+}
+
+struct BirthdayNotificationPreferences: Decodable {
+    let friendBirthdayReminders: Bool
+    enum CodingKeys: String, CodingKey {
+        case friendBirthdayReminders = "friend_birthday_reminders"
+    }
+}
+
+struct BirthdayNotificationPreferenceEnvelope: Decodable {
+    let preferences: BirthdayNotificationPreferences
+}
+
+struct BirthdayNotificationPreferencePayload: Encodable {
+    let friendBirthdayReminders: Bool
+    enum CodingKeys: String, CodingKey {
+        case friendBirthdayReminders = "friend_birthday_reminders"
+    }
+}
+
 struct APIProblem: Error, LocalizedError {
     let status: Int
     let reason: String
