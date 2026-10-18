@@ -149,16 +149,20 @@ private struct MainTabsView: View {
 
             NavigationStack {
                 List(session.people) { person in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(person.displayName).font(.headline)
-                        if let handle = person.handle {
-                            Text("@\(handle)").font(.caption).foregroundStyle(.secondary)
+                    NavigationLink {
+                        PersonDetailView(person: person)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(person.displayName).font(.headline)
+                            if let handle = person.handle {
+                                Text("@\(handle)").font(.caption).foregroundStyle(.secondary)
+                            }
+                            if let bio = person.bio, !bio.isEmpty {
+                                Text(bio).lineLimit(2)
+                            }
                         }
-                        if let bio = person.bio, !bio.isEmpty {
-                            Text(bio).lineLimit(2)
-                        }
+                        .padding(.vertical, 5)
                     }
-                    .padding(.vertical, 5)
                 }
                 .overlay {
                     if session.people.isEmpty && !session.isLoadingDirectory {
