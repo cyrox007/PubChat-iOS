@@ -7,15 +7,24 @@ struct ContentView: View {
         Group {
             switch session.state {
             case .restoring:
-                ProgressView("Восстанавливаем сеанс…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 22) {
+                    PubChatBrandMark()
+                    Text("PubChat").font(.system(size: 32, weight: .bold, design: .rounded))
+                    Text("Люди. Сообщества. Больше возможностей.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    ProgressView("Восстанавливаем сеанс…").padding(.top, 24)
+                }
+                .padding(28)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(PubChatDesign.background.ignoresSafeArea())
             case .signedOut:
                 AuthenticationView()
             case .signedIn:
                 MainTabsView()
             }
         }
-        .tint(Color(red: 0.58, green: 0.30, blue: 0.75))
+        .tint(PubChatDesign.primary)
     }
 }
 
@@ -42,9 +51,13 @@ private struct AuthenticationView: View {
             Form {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("PubChat", systemImage: "bubble.left.and.bubble.right.fill")
+                        PubChatBrandMark()
+                            .frame(maxWidth: .infinity)
+                        Text("PubChat")
                             .font(.largeTitle.bold())
-                        Text("Общение начинается с твоей Persona.")
+                            .frame(maxWidth: .infinity)
+                        Text("Люди. Сообщества. Возможности.")
+                            .frame(maxWidth: .infinity)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 12)
@@ -116,7 +129,7 @@ private struct AuthenticationView: View {
                     )
                 }
             }
-            .navigationTitle("Добро пожаловать")
+             .navigationTitle(registering ? "Создать аккаунт" : "С возвращением!")
         }
     }
 }
@@ -138,14 +151,16 @@ private struct MainTabsView: View {
                     .padding(.vertical, 5)
                 }
                 .overlay {
-                    if session.spaces.isEmpty && !session.isLoadingDirectory {
-                        ContentUnavailableView("Пока нет пространств", systemImage: "bubble.left.and.bubble.right")
+                    if session.isLoadingDirectory && session.spaces.isEmpty {
+                        PubChatLoadingPlaceholder()
+                    } else if session.spaces.isEmpty {
+                        PubChatEmptyView(title: "Здесь пока пусто", details: "Пространства появятся здесь, когда станут доступны.", systemImage: "square.grid.2x2")
                     }
                 }
                 .refreshable { await session.reloadDirectory() }
                 .navigationTitle("Пространства")
             }
-            .tabItem { Label("Spaces", systemImage: "square.grid.2x2.fill") }
+            .tabItem { Label("Пространства", systemImage: "square.grid.2x2.fill") }
 
             NavigationStack {
                 SocialDiscoveryView()
@@ -164,7 +179,7 @@ private struct MainTabsView: View {
             NavigationStack {
                 NotificationCenterView()
             }
-            .tabItem { Label("Уведомления", systemImage: "bell.fill") }
+            .tabItem { Label("Активность", systemImage: "bell.fill") }
 
             NavigationStack {
                 Form {
@@ -177,10 +192,9 @@ private struct MainTabsView: View {
                             }
                         }
                     }
-                    Section {
-                        Text("Это базовый iOS-клиент. Переписки, игры, управление Spaces и настройки приватности будут добавляться по общей матрице Web / Android / iOS.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                    Section("PubChat") {
+                        Label("Твой профиль и социальные связи", systemImage: "person.crop.circle.badge.checkmark")
+                        Label("Один аккаунт — несколько Persona", systemImage: "person.2.circle")
                     }
                     Section("Persona") {
                         NavigationLink("Мои образы") { PersonaManagerView() }
