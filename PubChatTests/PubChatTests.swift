@@ -2,6 +2,37 @@ import XCTest
 @testable import PubChat
 
 final class PubChatTests: XCTestCase {
+    func testLiveAvailabilityAndDiscoveryPrivacyProjection() throws {
+        let json = """
+        {"people":[{"account_uid":"visible-a","display_name":"Знакомый",
+        "handle":"friend","bio":null,"social_intent":"meet",
+        "availability":{"intent":"meet","note":"Ищу компанию","expires_at":"2026-10-18T20:00:00"}}],
+        "pagination":{"limit":30,"offset":0,"count":1,"total":1}}
+        """
+        let result = try JSONDecoder().decode(DiscoveryPage.self, from: Data(json.utf8))
+        XCTAssertEqual(result.people.count, 1)
+        XCTAssertEqual(result.people[0].availability?.intent, "meet")
+        XCTAssertEqual(result.people[0].availability?.note, "Ищу компанию")
+    }
+
+    func testExpiredAvailabilityCanBeAbsentWithoutBreakingPerson() throws {
+        let json = """
+        {"account_uid":"visible-b","display_name":"Друг","handle":"fox",
+        "social_intent":"friends","availability":null}
+        """
+        let person = try JSONDecoder().decode(Person.self, from: Data(json.utf8))
+        XCTAssertNil(person.availability)
+        XCTAssertEqual(person.socialIntent, "friends")
+    }
+
+    func testSocialAvailabilityUpdateContract() throws {
+        let payload = SocialAvailabilityPayload(intent: "open", durationMinutes: 120, note: "Привет!")
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(payload)) as? [String: Any])
+        XCTAssertEqual(object["intent"] as? String, "open")
+        XCTAssertEqual(object["duration_minutes"] as? Int, 120)
+        XCTAssertEqual(object["note"] as? String, "Привет!")
+    }
+
     func testIncomingFriendRequestsDecodeNestedPersonaAndMissingPersona() throws {
         let json = """
         {"status":"ok","direction":"incoming","requests":[
