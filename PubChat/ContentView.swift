@@ -66,8 +66,8 @@ private struct AuthenticationView: View {
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
                         Picker("Цель общения", selection: $intent) {
-                            ForEach(intents, id: \.0) { item in
-                                Text(item.1).tag(item.0)
+                            ForEach(intents.indices, id: \.self) { index in
+                                Text(intents[index].1).tag(intents[index].0)
                             }
                         }
                     } else {
