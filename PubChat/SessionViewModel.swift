@@ -11,6 +11,7 @@ final class SessionViewModel: ObservableObject {
     @Published private(set) var people: [Person] = []
     @Published private(set) var isBusy = false
     @Published private(set) var isLoadingDirectory = false
+    @Published private(set) var directoryError: String?
     @Published var errorMessage: String?
 
     private let api = PubChatAPI()
@@ -93,6 +94,7 @@ final class SessionViewModel: ObservableObject {
     func reloadDirectory() async {
         guard !isLoadingDirectory, let token = SecureStore.accessToken else { return }
         isLoadingDirectory = true
+        directoryError = nil
         defer { isLoadingDirectory = false }
         do {
             let newSpaces = try await api.spaces(accessToken: token)
@@ -100,7 +102,7 @@ final class SessionViewModel: ObservableObject {
             spaces = newSpaces
             people = newPeople
         } catch {
-            errorMessage = error.localizedDescription
+            directoryError = error.localizedDescription
         }
     }
 
