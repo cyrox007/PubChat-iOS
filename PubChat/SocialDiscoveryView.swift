@@ -44,7 +44,9 @@ struct SocialDiscoveryView: View {
 
             Section("Фильтры поиска") {
                 Picker("Намерение", selection: $intent) {
-                    ForEach(intents, id: \.0) { value, label in Text(label).tag(value) }
+                    ForEach(intents.indices, id: \.self) { index in
+                        Text(intents[index].1).tag(intents[index].0)
+                    }
                 }
                 Toggle("Открыты сейчас", isOn: $availableNow)
                 Button("Применить фильтры") { Task { await load() } }
