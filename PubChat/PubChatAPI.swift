@@ -62,6 +62,37 @@ final class PubChatAPI {
         return result.people
     }
 
+    func relationship(accountUid: String, accessToken: String) async throws -> Relationship {
+        let (result, _): (RelationshipEnvelope, String?) =
+            try await request("GET", "/social/v1/relationships/\(accountUid)", accessToken: accessToken)
+        return result.relationship
+    }
+
+    func follow(accountUid: String, accessToken: String, isFollowing: Bool) async throws -> Relationship {
+        let (result, _): (RelationshipEnvelope, String?) = try await request(
+            isFollowing ? "DELETE" : "POST",
+            "/social/v1/follows/\(accountUid)",
+            accessToken: accessToken
+        )
+        return result.relationship
+    }
+
+    func friendAction(accountUid: String, action: String, accessToken: String) async throws -> Relationship {
+        let payload = try JSONEncoder().encode(FriendActionPayload(action: action))
+        let (result, _): (RelationshipEnvelope, String?) = try await request(
+            "PATCH", "/social/v1/friends/\(accountUid)", body: payload, accessToken: accessToken
+        )
+        return result.relationship
+    }
+
+    func block(accountUid: String, accessToken: String, isBlocked: Bool) async throws -> Relationship {
+        let (result, _): (RelationshipEnvelope, String?) = try await request(
+            isBlocked ? "DELETE" : "POST",
+            "/social/v1/blocks/\(accountUid)", accessToken: accessToken
+        )
+        return result.relationship
+    }
+
     func logout(accessToken: String?, refreshCookie: String?) async throws {
         let _: (StatusEnvelope, String?) = try await request(
             "POST",
