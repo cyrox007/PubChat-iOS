@@ -179,7 +179,7 @@ private struct MainTabsView: View {
                             Label("Друзья и заявки", systemImage: "person.crop.circle.badge.checkmark")
                         }
                     }
-                }                .navigationTitle("Люди")
+                }
             }
             .tabItem { Label("Люди", systemImage: "person.2.fill") }
 
