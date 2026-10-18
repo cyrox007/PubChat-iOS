@@ -7,15 +7,15 @@ struct ContentView: View {
         Group {
             switch session.state {
             case .restoring:
-                ProgressView("Восстанавливаем сеанс…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                PubChatLoadingView()
             case .signedOut:
                 AuthenticationView()
             case .signedIn:
                 MainTabsView()
             }
         }
-        .tint(Color(red: 0.58, green: 0.30, blue: 0.75))
+        .tint(PubChatDesign.primary)
+        .background(PubChatDesign.background.ignoresSafeArea())
     }
 }
 
