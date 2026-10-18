@@ -104,6 +104,37 @@ final class SessionViewModel: ObservableObject {
         }
     }
 
+    // Native clients use the same server-owned social graph as Web.
+    // A missing/expired access token never grants local relationship permissions.
+    private func socialAccessToken() throws -> String {
+        guard state == .signedIn, let token = SecureStore.accessToken, !token.isEmpty else {
+            throw APIProblem(status: 401, reason: "Сеанс завершён. Войдите снова.")
+        }
+        return token
+    }
+
+    func relationship(accountUid: String) async throws -> Relationship {
+        try await api.relationship(accountUid: accountUid, accessToken: socialAccessToken())
+    }
+
+    func toggleFollow(accountUid: String, currentlyFollowing: Bool) async throws -> Relationship {
+        try await api.follow(
+            accountUid: accountUid, accessToken: socialAccessToken(), isFollowing: currentlyFollowing
+        )
+    }
+
+    func friendAction(accountUid: String, action: String) async throws -> Relationship {
+        try await api.friendAction(
+            accountUid: accountUid, action: action, accessToken: socialAccessToken()
+        )
+    }
+
+    func toggleBlock(accountUid: String, currentlyBlocked: Bool) async throws -> Relationship {
+        try await api.block(
+            accountUid: accountUid, accessToken: socialAccessToken(), isBlocked: currentlyBlocked
+        )
+    }
+
     func signOut() async {
         guard !isBusy else { return }
         isBusy = true
