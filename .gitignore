@@ -1,0 +1,13 @@
+# Generated locally or by GitHub Actions
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+build/
+*.xcuserstate
+*.xcuserdata/
+.DS_Store
+.env
+*.p12
+*.mobileprovision
+*.ipa
+*.xcresult/
