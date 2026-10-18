@@ -190,6 +190,9 @@ private struct MainTabsView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
+                    Section("Persona") {
+                        NavigationLink("Мои образы") { PersonaManagerView() }
+                    }
                     Section {
                         Button("Выйти из аккаунта", role: .destructive) {
                             Task { await session.signOut() }
