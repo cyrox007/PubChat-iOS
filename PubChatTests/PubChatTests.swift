@@ -2,6 +2,34 @@ import XCTest
 @testable import PubChat
 
 final class PubChatTests: XCTestCase {
+    func testIncomingFriendRequestsDecodeNestedPersonaAndMissingPersona() throws {
+        let json = """
+        {"status":"ok","direction":"incoming","requests":[
+          {"account_uid":"account-a","persona":{"uid":"account-a","persona_uid":"persona-a","handle":"f1","display_name":"Друг","avatar":null}},
+          {"account_uid":"account-b","persona":null}
+        ],"pagination":{"limit":50,"offset":0,"count":2,"total":2}}
+        """
+        let result = try JSONDecoder().decode(FriendRequestsEnvelope.self, from: Data(json.utf8))
+        XCTAssertEqual(result.direction, "incoming")
+        XCTAssertEqual(result.requests.count, 2)
+        XCTAssertEqual(result.requests[0].id, "account-a")
+        XCTAssertEqual(result.requests[0].displayName, "Друг")
+        XCTAssertEqual(result.requests[1].displayName, "Участник PubChat")
+        XCTAssertEqual(result.pagination.total, 2)
+    }
+
+    func testFriendListDistinguishesAccountUidFromPersonaUid() throws {
+        let json = """
+        {"status":"ok","friends":[
+          {"account_uid":"account-id","persona":{"uid":"account-id","persona_uid":"public-persona-id","handle":"friendly","display_name":"Друг"}}
+        ],"pagination":{"limit":50,"offset":0,"count":1,"total":1}}
+        """
+        let result = try JSONDecoder().decode(FriendshipListEnvelope.self, from: Data(json.utf8))
+        XCTAssertEqual(result.friends.first?.accountUid, "account-id")
+        XCTAssertEqual(result.friends.first?.persona?.handle, "friendly")
+        XCTAssertEqual(result.pagination.total, 1)
+    }
+
     func testIdentityV2ProjectionDecodesWithoutLeakingHiddenAccountFields() throws {
         let json = """
         {

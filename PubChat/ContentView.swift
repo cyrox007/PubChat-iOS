@@ -171,6 +171,15 @@ private struct MainTabsView: View {
                 }
                 .refreshable { await session.reloadDirectory() }
                 .navigationTitle("Люди")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink {
+                            FriendshipHubView()
+                        } label: {
+                            Label("Друзья и заявки", systemImage: "person.crop.circle.badge.checkmark")
+                        }
+                    }
+                }
             }
             .tabItem { Label("Люди", systemImage: "person.2.fill") }
 

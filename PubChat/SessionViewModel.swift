@@ -135,6 +135,14 @@ final class SessionViewModel: ObservableObject {
         )
     }
 
+    func listFriendRequests(direction: String, offset: Int = 0) async throws -> FriendRequestsEnvelope {
+        try await api.friendRequests(direction: direction, offset: offset, accessToken: socialAccessToken())
+    }
+
+    func listFriends(offset: Int = 0) async throws -> FriendshipListEnvelope {
+        try await api.friends(offset: offset, accessToken: socialAccessToken())
+    }
+
     func listPersonas() async throws -> PersonaListEnvelope {
         guard state == .signedIn, let token = SecureStore.accessToken else {
             throw APIProblem(status: 401, reason: "Сеанс завершён.")

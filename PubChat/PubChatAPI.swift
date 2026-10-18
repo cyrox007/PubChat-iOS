@@ -93,6 +93,24 @@ final class PubChatAPI {
         return result.relationship
     }
 
+    func friendRequests(direction: String, offset: Int = 0, accessToken: String) async throws -> FriendRequestsEnvelope {
+        guard direction == "incoming" || direction == "outgoing" else {
+            throw APIProblem(status: -1, reason: "Некорректное направление запросов.")
+        }
+        let (result, _): (FriendRequestsEnvelope, String?) = try await request(
+            "GET", "/social/v1/friend-requests?direction=\(direction)&limit=50&offset=\(offset)",
+            accessToken: accessToken
+        )
+        return result
+    }
+
+    func friends(offset: Int = 0, accessToken: String) async throws -> FriendshipListEnvelope {
+        let (result, _): (FriendshipListEnvelope, String?) = try await request(
+            "GET", "/social/v1/friends?limit=50&offset=\(offset)", accessToken: accessToken
+        )
+        return result
+    }
+
     func personas(accessToken: String) async throws -> PersonaListEnvelope {
         let (result, _): (PersonaListEnvelope, String?) =
             try await request("GET", "/identity/v2/personas", accessToken: accessToken)
