@@ -82,6 +82,7 @@ struct Person: Decodable, Identifiable {
     let handle: String?
     let bio: String?
     let socialIntent: String?
+    var availability: SocialAvailability? = nil
     var id: String { accountUid }
 
     enum CodingKeys: String, CodingKey {
@@ -89,6 +90,39 @@ struct Person: Decodable, Identifiable {
         case accountUid = "account_uid"
         case displayName = "display_name"
         case socialIntent = "social_intent"
+        case availability
+    }
+}
+
+struct SocialAvailability: Codable, Equatable {
+    let intent: String
+    let note: String?
+    let expiresAt: String
+    enum CodingKeys: String, CodingKey {
+        case intent, note
+        case expiresAt = "expires_at"
+    }
+}
+
+struct SocialAvailabilityEnvelope: Decodable {
+    let availability: SocialAvailability?
+}
+
+struct SocialAvailabilityPayload: Encodable {
+    let intent: String
+    let durationMinutes: Int
+    let note: String?
+    enum CodingKeys: String, CodingKey {
+        case intent, note
+        case durationMinutes = "duration_minutes"
+    }
+}
+
+struct DiscoveryPage: Decodable {
+    let people: [Person]
+    let pagination: Pagination
+    struct Pagination: Decodable {
+        let total: Int
     }
 }
 
