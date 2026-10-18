@@ -167,6 +167,26 @@ final class SessionViewModel: ObservableObject {
         try await api.friends(offset: offset, accessToken: socialAccessToken())
     }
 
+    func notificationInbox() async throws -> NotificationInboxEnvelope {
+        let token = try socialAccessToken()
+        try await api.syncNotificationInbox(accessToken: token)
+        return try await api.notifications(accessToken: token)
+    }
+
+    func markNotificationRead(uid: String) async throws {
+        try await api.markNotificationRead(uid: uid, accessToken: socialAccessToken())
+    }
+
+    func getBirthdayNotificationPreference() async throws -> Bool {
+        try await api.birthdayNotificationPreference(accessToken: socialAccessToken())
+    }
+
+    func setBirthdayNotificationPreference(_ enabled: Bool) async throws -> Bool {
+        try await api.setBirthdayNotificationPreference(
+            enabled, accessToken: socialAccessToken()
+        )
+    }
+
     func listPersonas() async throws -> PersonaListEnvelope {
         guard state == .signedIn, let token = SecureStore.accessToken else {
             throw APIProblem(status: 401, reason: "Сеанс завершён.")

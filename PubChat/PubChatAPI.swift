@@ -162,6 +162,44 @@ final class PubChatAPI {
         return result
     }
 
+    func syncNotificationInbox(accessToken: String) async throws {
+        let _: (StatusEnvelope, String?) = try await request(
+            "POST", "/notifications/v1/sync", accessToken: accessToken
+        )
+    }
+
+    func notifications(accessToken: String) async throws -> NotificationInboxEnvelope {
+        let (result, _): (NotificationInboxEnvelope, String?) = try await request(
+            "GET", "/notifications/v1?limit=100", accessToken: accessToken
+        )
+        return result
+    }
+
+    func markNotificationRead(uid: String, accessToken: String) async throws {
+        // A path-segment UID must be a UUID; never interpolate arbitrary URLs.
+        guard UUID(uuidString: uid) != nil else {
+            throw APIProblem(status: -1, reason: "Некорректное уведомление.")
+        }
+        let _: (StatusEnvelope, String?) = try await request(
+            "PATCH", "/notifications/v1/\(uid)/read", accessToken: accessToken
+        )
+    }
+
+    func birthdayNotificationPreference(accessToken: String) async throws -> Bool {
+        let (result, _): (BirthdayNotificationPreferenceEnvelope, String?) = try await request(
+            "GET", "/notifications/v1/message-preferences", accessToken: accessToken
+        )
+        return result.preferences.friendBirthdayReminders
+    }
+
+    func setBirthdayNotificationPreference(_ enabled: Bool, accessToken: String) async throws -> Bool {
+        let body = try JSONEncoder().encode(BirthdayNotificationPreferencePayload(friendBirthdayReminders: enabled))
+        let (result, _): (BirthdayNotificationPreferenceEnvelope, String?) = try await request(
+            "PATCH", "/notifications/v1/message-preferences", body: body, accessToken: accessToken
+        )
+        return result.preferences.friendBirthdayReminders
+    }
+
     func personas(accessToken: String) async throws -> PersonaListEnvelope {
         let (result, _): (PersonaListEnvelope, String?) =
             try await request("GET", "/identity/v2/personas", accessToken: accessToken)

@@ -2,6 +2,26 @@ import XCTest
 @testable import PubChat
 
 final class PubChatTests: XCTestCase {
+    func testPrivacyMinimalBirthdayInboxDecodesNativeClient() throws {
+        let json = """
+        {"status":"ok","notifications":[{"uid":"abbbaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+          "kind":"friend_birthday","title":"Сегодня день рождения у друга",
+          "body":"Можете поздравить друга в PubChat.","is_read":false,
+          "created_at":"2026-10-18T09:00:00"}],"pagination":{"total":1},"unread":1}
+        """
+        let inbox = try JSONDecoder().decode(NotificationInboxEnvelope.self, from: Data(json.utf8))
+        XCTAssertEqual(inbox.notifications.count, 1)
+        XCTAssertEqual(inbox.unread, 1)
+        XCTAssertEqual(inbox.notifications[0].kind, "friend_birthday")
+        XCTAssertFalse(inbox.notifications[0].isRead)
+    }
+
+    func testBirthdayConsentPayloadIsExplicitBoolean() throws {
+        let data = try JSONEncoder().encode(BirthdayNotificationPreferencePayload(friendBirthdayReminders: true))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(json["friend_birthday_reminders"] as? Bool, true)
+    }
+
     func testLiveAvailabilityAndDiscoveryPrivacyProjection() throws {
         let json = """
         {"people":[{"account_uid":"visible-a","display_name":"Знакомый",

@@ -162,6 +162,11 @@ private struct MainTabsView: View {
             .tabItem { Label("Люди", systemImage: "person.2.fill") }
 
             NavigationStack {
+                NotificationCenterView()
+            }
+            .tabItem { Label("Уведомления", systemImage: "bell.fill") }
+
+            NavigationStack {
                 Form {
                     if let persona = session.identity?.persona {
                         Section("Моя Persona") {
