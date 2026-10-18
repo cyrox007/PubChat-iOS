@@ -137,23 +137,102 @@ private struct MainTabsView: View {
     var body: some View {
         TabView {
             NavigationStack {
-                List(session.spaces) { space in
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(space.name).font(.headline)
-                        if let description = space.description, !description.isEmpty {
-                            Text(description).font(.subheadline).foregroundStyle(.secondary)
-                                .lineLimit(2)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(PubChatDesign.primary)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Открывай своё").font(.title2.bold())
+                                Text("Сообщества и разговоры по интересам")
+                                    .font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.top, 12)
+
+                        if session.isLoadingDirectory && session.spaces.isEmpty {
+                            ForEach(0..<4, id: \.self) { _ in
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(PubChatDesign.primary.opacity(0.07))
+                                    .frame(height: 118)
+                                    .overlay(alignment: .leading) {
+                                        HStack(spacing: 14) {
+                                            Circle().fill(PubChatDesign.primary.opacity(0.09))
+                                                .frame(width: 58, height: 58)
+                                            VStack(alignment: .leading, spacing: 12) {
+                                                Capsule().fill(PubChatDesign.primary.opacity(0.1))
+                                                    .frame(width: 158, height: 16)
+                                                Capsule().fill(PubChatDesign.primary.opacity(0.07))
+                                                    .frame(width: 200, height: 12)
+                                            }
+                                        }.padding(18)
+                                    }
+                                    .accessibilityLabel("Загрузка пространства")
+                            }
+                            .padding(.horizontal, 16)
+                        } else if session.spaces.isEmpty {
+                            PubChatStateCard(
+                                symbol: session.directoryError == nil ? "square.grid.2x2" : "wifi.exclamationmark",
+                                title: session.directoryError == nil ? "Пока нет пространств" : "Не удалось загрузить",
+                                message: session.directoryError == nil
+                                    ? "Попробуйте обновить каталог или открыть раздел «Люди»."
+                                    : "Проверьте подключение и повторите попытку.",
+                                actionTitle: "Обновить",
+                                action: { Task { await session.reloadDirectory() } }
+                            )
+                            .padding(.horizontal, 16)
+                        } else {
+                            if session.directoryError != nil {
+                                Label("Не удалось обновить каталог. Показаны последние данные.",
+                                      systemImage: "exclamationmark.triangle")
+                                    .font(.caption)
+                                    .foregroundStyle(PubChatDesign.danger)
+                                    .padding(.horizontal, 20)
+                            }
+                            ForEach(session.spaces) { space in
+                                HStack(alignment: .top, spacing: 14) {
+                                    Image(systemName: "person.3.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.white)
+                                        .frame(width: 58, height: 58)
+                                        .background(PubChatDesign.brandGradient,
+                                                    in: RoundedRectangle(cornerRadius: 16))
+                                    VStack(alignment: .leading, spacing: 7) {
+                                        Text(space.name).font(.headline)
+                                            .foregroundStyle(PubChatDesign.ink)
+                                        if let description = space.description, !description.isEmpty {
+                                            Text(description).font(.subheadline)
+                                                .foregroundStyle(PubChatDesign.secondaryInk)
+                                                .lineLimit(3)
+                                        }
+                                    }
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(16)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.white,
+                                    in: RoundedRectangle(cornerRadius: 20))
+                                .overlay(RoundedRectangle(cornerRadius: 20)
+                                    .stroke(PubChatDesign.border, lineWidth: 1))
+                                .padding(.horizontal, 16)
+                            }
                         }
                     }
-                    .padding(.vertical, 5)
+                    .padding(.bottom, 20)
                 }
-                .overlay {
-                    if session.spaces.isEmpty && !session.isLoadingDirectory {
-                        PubChatStateCard(symbol: "square.grid.2x2", title: "Пока нет пространств", message: "Здесь появятся доступные сообщества. Обновите каталог.")
-                    }
-                }
+                .background(PubChatDesign.background)
                 .refreshable { await session.reloadDirectory() }
                 .navigationTitle("Пространства")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            Task { await session.reloadDirectory() }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }.disabled(session.isLoadingDirectory)
+                    }
+                }
             }
             .tabItem { Label("Пространства", systemImage: "square.grid.2x2.fill") }
 
