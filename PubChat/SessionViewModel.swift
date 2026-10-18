@@ -135,6 +135,35 @@ final class SessionViewModel: ObservableObject {
         )
     }
 
+    func listPersonas() async throws -> PersonaListEnvelope {
+        guard state == .signedIn, let token = SecureStore.accessToken else {
+            throw APIProblem(status: 401, reason: "Сеанс завершён.")
+        }
+        return try await api.personas(accessToken: token)
+    }
+
+    func createPersona(handle: String, displayName: String) async throws {
+        guard state == .signedIn, let token = SecureStore.accessToken else {
+            throw APIProblem(status: 401, reason: "Сеанс завершён.")
+        }
+        _ = try await api.createPersona(
+            handle: handle, displayName: displayName, accessToken: token
+        )
+    }
+
+    func activatePersona(uid: String) async throws {
+        guard state == .signedIn, let token = SecureStore.accessToken else {
+            throw APIProblem(status: 401, reason: "Сеанс завершён.")
+        }
+        let selected = try await api.activatePersona(uid: uid, accessToken: token)
+        guard selected.status == "ok", selected.account?.uid == identity?.account?.uid,
+              selected.persona?.uid == uid else {
+            throw APIProblem(status: -1, reason: "Сервер не подтвердил выбор образа.")
+        }
+        identity = selected
+        // Account-scoped Spaces, DMs and moderation are not separate per Persona.
+    }
+
     func signOut() async {
         guard !isBusy else { return }
         isBusy = true
