@@ -50,9 +50,22 @@ final class PubChatAPI {
         return result
     }
 
-    func spaces(accessToken: String) async throws -> [Space] {
+    func spaceCategories(accessToken: String) async throws -> [SpaceCategory] {
+        let (result, _): (SpaceCategoryEnvelope, String?) =
+            try await request("GET", "/spaces/v1/categories", accessToken: accessToken)
+        return result.categories
+    }
+
+    func spaces(accessToken: String, category: String? = nil) async throws -> [Space] {
+        var route = "/spaces/v1?limit=50"
+        if let category {
+            guard category.range(of: "^[a-z][a-z0-9-]{0,39}$", options: .regularExpression) != nil else {
+                throw APIProblem(status: -1, reason: "Недопустимая категория.")
+            }
+            route += "&category=\(category)"
+        }
         let (result, _): (SpaceListEnvelope, String?) =
-            try await request("GET", "/spaces/v1?limit=50", accessToken: accessToken)
+            try await request("GET", route, accessToken: accessToken)
         return result.spaces
     }
 
