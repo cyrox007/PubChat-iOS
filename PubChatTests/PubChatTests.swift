@@ -2,6 +2,28 @@ import XCTest
 @testable import PubChat
 
 final class PubChatTests: XCTestCase {
+    func testNativeSpacesDecodeServerManagedCategoriesWithoutRequiringOldDataMigration() throws {
+        let json = """
+        {"spaces":[
+          {"uid":"one","name":"Дизайн","description":"UX","category_slugs":["design","technology"]},
+          {"uid":"two","name":"Без категории","description":null}
+        ]}
+        """
+        let envelope = try JSONDecoder().decode(SpaceListEnvelope.self, from: Data(json.utf8))
+        XCTAssertEqual(envelope.spaces[0].categorySlugs, ["design", "technology"])
+        XCTAssertNil(envelope.spaces[1].categorySlugs)
+    }
+
+    func testSpaceCategoriesAreServerOwnedAndDecodedBySlug() throws {
+        let json = """
+        {"categories":[{"slug":"design","name":"Дизайн","icon":"palette",
+          "description":null,"locale":"ru","position":10,"is_active":true}]}
+        """
+        let catalog = try JSONDecoder().decode(SpaceCategoryEnvelope.self, from: Data(json.utf8))
+        XCTAssertEqual(catalog.categories.first?.slug, "design")
+        XCTAssertEqual(catalog.categories.first?.name, "Дизайн")
+    }
+
     func testMessengerDialogIsAccountScopedAndDoesNotInterpretCiphertextPreview() throws {
         let json = """
         {"status":"ok","dialogs":[{"partner_id":"8d56084c-5cb8-4756-861a-3254873e0e07",
