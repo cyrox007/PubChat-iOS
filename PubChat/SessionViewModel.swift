@@ -96,13 +96,19 @@ final class SessionViewModel: ObservableObject {
         isLoadingDirectory = true
         directoryError = nil
         defer { isLoadingDirectory = false }
+        // Spaces and People are independent destinations. A discovery failure
+        // must not make a successfully fetched Spaces catalog look unavailable.
         do {
-            let newSpaces = try await api.spaces(accessToken: token)
-            let newPeople = try await api.people(accessToken: token)
-            spaces = newSpaces
-            people = newPeople
+            spaces = try await api.spaces(accessToken: token)
         } catch {
             directoryError = error.localizedDescription
+        }
+        // Preserve the legacy People snapshot independently. The People tab
+        // performs its own filtered discovery request and error handling.
+        do {
+            people = try await api.people(accessToken: token)
+        } catch {
+            // No Spaces error: the People screen has its own load/retry UI.
         }
     }
 
