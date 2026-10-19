@@ -94,12 +94,19 @@ struct MessengerHubView: View {
                                             .accessibilityLabel("Непрочитанных: \(dialog.unreadCount)")
                                     }
                                 }
-                                .padding(.vertical, 6)
+                                .padding(12)
+                                .background(PubChatDesign.surface,
+                                            in: RoundedRectangle(cornerRadius: 18))
+                                .overlay(RoundedRectangle(cornerRadius: 18)
+                                    .stroke(PubChatDesign.border, lineWidth: 1))
                             }
-                            .listRowBackground(PubChatDesign.surface)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
+                            .listRowBackground(Color.clear)
                         }
                     }
                     .scrollContentBackground(.hidden)
+                    .listStyle(.plain)
                     .refreshable { await messenger.refreshDialogs() }
                 }
             }
@@ -157,33 +164,25 @@ private struct MessengerConversationView: View {
                 .padding(16)
                 Spacer()
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(messenger.messages) { message in
-                            HStack {
-                                if messenger.isMine(message) { Spacer(minLength: 28) }
-                                VStack(alignment: messenger.isMine(message) ? .trailing : .leading,
-                                       spacing: 6) {
-                                    Text(message.visibleText)
-                                        .font(.body)
-                                        .foregroundStyle(PubChatDesign.ink)
-                                        .textSelection(.enabled)
-                                    if messenger.isMine(message) {
-                                        Text(message.isRead ? "Прочитано" : "Отправлено")
-                                            .font(.caption2)
-                                            .foregroundStyle(PubChatDesign.secondaryInk)
-                                    }
-                                }
-                                .padding(12)
-                                .background(messenger.isMine(message)
-                                            ? PubChatDesign.primary.opacity(0.13)
-                                            : PubChatDesign.surface,
-                                            in: RoundedRectangle(cornerRadius: 18))
-                                if !messenger.isMine(message) { Spacer(minLength: 28) }
+                ScrollViewReader { scroll in
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(messenger.messages) { message in
+                                MessengerBubble(message: message, own: messenger.isMine(message))
+                                    .id(message.uid)
                             }
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
                     }
-                    .padding(16)
+                    .scrollDismissesKeyboard(.interactively)
+                    .defaultScrollAnchor(.bottom)
+                    .onChange(of: messenger.messages.last?.uid) { _, lastID in
+                        guard let lastID else { return }
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            scroll.scrollTo(lastID, anchor: .bottom)
+                        }
+                    }
                 }
             }
             Divider()
@@ -192,34 +191,64 @@ private struct MessengerConversationView: View {
                       systemImage: "lock.shield")
                     .font(.footnote)
                     .foregroundStyle(PubChatDesign.secondaryInk)
-                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .background(PubChatDesign.surface)
             } else {
-                HStack(alignment: .bottom, spacing: 10) {
-                    TextField("Сообщение", text: $messenger.draft, axis: .vertical)
-                        .lineLimit(1...5)
-                        .textFieldStyle(.roundedBorder)
-                        .accessibilityLabel("Текст сообщения")
-                        .disabled(messenger.connection != "connected")
-                    Button {
-                        Task { await messenger.sendText() }
-                    } label: {
-                        if messenger.sending { ProgressView() }
-                        else { Image(systemName: "arrow.up").font(.headline.bold()) }
+                VStack(spacing: 8) {
+                    if messenger.encryption == nil {
+                        Label("Проверяем режим шифрования. Отправка временно недоступна.",
+                              systemImage: "lock")
+                            .font(.caption)
+                            .foregroundStyle(PubChatDesign.secondaryInk)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(PubChatDesign.primary)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .accessibilityLabel(messenger.sending ? "Ожидаем подтверждения" : "Отправить сообщение")
-                    .disabled(!messenger.canSend)
+                    HStack(alignment: .bottom, spacing: 8) {
+                        TextField("Сообщение", text: $messenger.draft, axis: .vertical)
+                            .lineLimit(1...5)
+                            .font(.body)
+                            .foregroundStyle(PubChatDesign.ink)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 11)
+                            .frame(minHeight: 44)
+                            .background(PubChatDesign.background,
+                                        in: RoundedRectangle(cornerRadius: 12))
+                            .overlay(RoundedRectangle(cornerRadius: 12)
+                                .stroke(PubChatDesign.border, lineWidth: 1))
+                            .accessibilityLabel("Текст сообщения")
+                            .disabled(messenger.connection != "connected")
+                        Button {
+                            Task { await messenger.sendText() }
+                        } label: {
+                            Group {
+                                if messenger.sending {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Image(systemName: "arrow.up")
+                                        .font(.system(size: 18, weight: .bold))
+                                }
+                            }
+                            .frame(width: 44, height: 44)
+                            .foregroundStyle(.white)
+                            .background(PubChatDesign.brandGradient,
+                                        in: RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(messenger.sending ? "Ожидаем подтверждения" : "Отправить сообщение")
+                        .disabled(!messenger.canSend)
+                        .opacity(messenger.canSend || messenger.sending ? 1 : 0.48)
+                    }
+                    if messenger.sending {
+                        Text("Ожидаем подтверждения сервера. Повторная отправка заблокирована.")
+                            .font(.caption)
+                            .foregroundStyle(PubChatDesign.secondaryInk)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                if messenger.sending {
-                    Text("Ожидаем подтверждения сервера. Повторная отправка заблокирована.")
-                        .font(.caption2)
-                        .foregroundStyle(PubChatDesign.secondaryInk)
-                        .padding(.bottom, 8)
-                }
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+                .background(PubChatDesign.surface)
             }
         }
         .background(PubChatDesign.background)
@@ -236,5 +265,39 @@ private struct MessengerConversationView: View {
         case "connecting": return "Подключаем Messenger…"
         default: return "Нет соединения с Messenger"
         }
+    }
+}
+
+private struct MessengerBubble: View {
+    let message: MessengerMessage
+    let own: Bool
+
+    var body: some View {
+        HStack {
+            if own { Spacer(minLength: 30) }
+            VStack(alignment: .leading, spacing: 8) {
+                Text(message.visibleText)
+                    .font(.body)
+                    .foregroundStyle(PubChatDesign.ink)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if own {
+                    Text(message.isRead ? "✓✓ Прочитано" : "✓ Отправлено")
+                        .font(.caption)
+                        .foregroundStyle(PubChatDesign.secondaryInk)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: 310, alignment: .leading)
+            .background(own ? PubChatDesign.primary.opacity(0.12) : PubChatDesign.surface,
+                        in: RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18)
+                .stroke(PubChatDesign.border.opacity(own ? 0.25 : 0.7), lineWidth: 1))
+            .accessibilityElement(children: .combine)
+            if !own { Spacer(minLength: 30) }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
