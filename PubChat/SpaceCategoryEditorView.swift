@@ -172,7 +172,7 @@ struct SpaceCategoryEditorView: View {
             await session.reloadDirectory()
             dismiss()
         } catch {
-            error = error.localizedDescription
+            self.error = error.localizedDescription
         }
     }
 }
