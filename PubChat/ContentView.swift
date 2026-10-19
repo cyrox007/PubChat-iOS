@@ -133,6 +133,8 @@ private struct AuthenticationView: View {
 
 private struct MainTabsView: View {
     @EnvironmentObject private var session: SessionViewModel
+    @State private var showCreateSpace = false
+    @State private var editingSpace: Space?
 
     var body: some View {
         TabView {
@@ -245,7 +247,9 @@ private struct MainTabsView: View {
                             ForEach(session.spaces) { space in
                                 SpaceDirectoryCard(
                                     space: space,
-                                    categoryNames: (space.categorySlugs ?? []).map(session.spaceCategoryName)
+                                    categoryNames: (space.categorySlugs ?? []).map(session.spaceCategoryName),
+                                    onEdit: space.owned(by: session.identity?.account?.uid)
+                                        ? { editingSpace = space } : nil
                                 )
                                     .padding(.horizontal, 16)
                             }
@@ -257,6 +261,12 @@ private struct MainTabsView: View {
                 .refreshable { await session.reloadDirectory() }
                 .navigationTitle("Пространства")
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { showCreateSpace = true } label: {
+                            Image(systemName: "plus")
+                        }
+                        .accessibilityLabel("Создать пространство")
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             Task { await session.reloadDirectory() }
@@ -326,6 +336,14 @@ private struct MainTabsView: View {
             await session.loadSpaceCategories()
             await session.reloadDirectory()
         }
+        .sheet(isPresented: $showCreateSpace) {
+            SpaceCategoryEditorView()
+                .environmentObject(session)
+        }
+        .sheet(item: $editingSpace) { space in
+            SpaceCategoryEditorView(space: space)
+                .environmentObject(session)
+        }
         .overlay(alignment: .top) {
             if session.isLoadingDirectory {
                 HStack(spacing: 10) {
@@ -343,6 +361,7 @@ private struct MainTabsView: View {
 private struct SpaceDirectoryCard: View {
     let space: Space
     let categoryNames: [String]
+    let onEdit: (() -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -374,6 +393,12 @@ private struct SpaceDirectoryCard: View {
                         .foregroundStyle(PubChatDesign.secondaryInk)
                         .lineLimit(3)
                 }
+                if let onEdit {
+                    Button("Изменить категории", action: onEdit)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PubChatDesign.primary)
+                        .frame(minHeight: 44, alignment: .leading)
+                }
             }
             Spacer(minLength: 0)
         }
@@ -384,6 +409,6 @@ private struct SpaceDirectoryCard: View {
         .overlay(RoundedRectangle(cornerRadius: 20)
             .stroke(PubChatDesign.border, lineWidth: 1))
         // iOS currently has a catalog-only Spaces API. No inert join button.
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
     }
 }
