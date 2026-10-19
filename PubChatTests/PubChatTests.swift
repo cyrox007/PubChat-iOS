@@ -2,6 +2,48 @@ import XCTest
 @testable import PubChat
 
 final class PubChatTests: XCTestCase {
+    func testMessengerDialogIsAccountScopedAndDoesNotInterpretCiphertextPreview() throws {
+        let json = """
+        {"status":"ok","dialogs":[{"partner_id":"8d56084c-5cb8-4756-861a-3254873e0e07",
+          "last_message":"encrypted-opaque-string","last_message_time":"2026-10-19T07:00:00",
+          "unread_count":2,"partner":{"username":"friend","avatar":null}}]}
+        """
+        let result = try JSONDecoder().decode(MessengerDialogsEnvelope.self, from: Data(json.utf8))
+        XCTAssertEqual(result.dialogs.first?.partnerID, "8d56084c-5cb8-4756-861a-3254873e0e07")
+        XCTAssertEqual(result.dialogs.first?.title, "friend")
+        XCTAssertEqual(result.dialogs.first?.unreadCount, 2)
+    }
+
+    func testMessengerEncryptionPolicyFailsClosedForE2EE() throws {
+        let json = """
+        {"status":"ok","encryption":{"effective_mode":"e2ee","system_policy":"required"}}
+        """
+        let policy = try JSONDecoder().decode(MessengerEncryptionEnvelope.self, from: Data(json.utf8))
+        XCTAssertFalse(policy.encryption.allowsPlaintext)
+        XCTAssertEqual(policy.encryption.systemPolicy, "required")
+    }
+
+    func testMessengerServerConfirmedMessagesHaveSafeTypeProjection() throws {
+        let encrypted = """
+        {"uid":"m1","content":"ciphertext-not-to-be-shown","content_type":"e2ee",
+        "sender_uid":"account-a","receiver_uid":"account-b","is_read":false,
+        "created_at":"2026-10-19T07:00:00"}
+        """
+        let message = try JSONDecoder().decode(MessengerMessage.self, from: Data(encrypted.utf8))
+        XCTAssertFalse(message.supportsText)
+        XCTAssertFalse(message.visibleText.contains("ciphertext-not-to-be-shown"))
+
+        let plain = """
+        {"uid":"m2","content":"Привет!","content_type":"text",
+        "sender_uid":"account-b","receiver_uid":"account-a","is_read":true,
+        "created_at":"2026-10-19T07:01:00"}
+        """
+        let decoded = try JSONDecoder().decode(MessengerMessage.self, from: Data(plain.utf8))
+        XCTAssertTrue(decoded.supportsText)
+        XCTAssertEqual(decoded.visibleText, "Привет!")
+        XCTAssertTrue(decoded.isRead)
+    }
+
     func testPrivacyMinimalBirthdayInboxDecodesNativeClient() throws {
         let json = """
         {"status":"ok","notifications":[{"uid":"abbbaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
