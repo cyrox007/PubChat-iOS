@@ -13,7 +13,7 @@
 | **DM consent** `everyone/shared_spaces/mutual/nobody` | Identity v2 `/privacy` | Слито [#53](https://github.com/cyrox007/PubChat-Android/pull/53), `7160c5d` | Слито [#16](https://github.com/cyrox007/PubChat-iOS/pull/16), `23cce07`; simulator XCTest green | Device QA, блокировка/revocation/new conversation, не позволять обходить сервер |
 | Spaces каталог | Код | Код | Код (каталог) | iOS membership и room |
 | **Создать Space с параметрами** | `POST /spaces/v1` | Слито [#51](https://github.com/cyrox007/PubChat-Android/pull/51), `05653df` | **Нет native flow** | iOS реализация; Android physical QA |
-| Space invitations: inbox, accept/reject/open | Web + API | Нет полного inbox flow | Нет полного flow | **Следующий Android пользовательский срез** |
+| Space invitations: inbox, accept/reject/open | Web + API | **Слито [Android #56](https://github.com/cyrox007/PubChat-Android/pull/56), `07cae34`**, обе CI-конфигурации green | Нет native inbox/accept/decline | Android real-device и Web↔Android privacy/expired/revoked QA; iOS реализация |
 | Spaces realtime/history/management | Код | Код (не полная Web parity) | **Нет** | iOS полноценное участие |
 | Activities/игры/повторы | Код | Частично | Нет | Cross-client recurring/timezone |
 | Messenger DM basics | Код | Код (частично) | Начальный Messenger, неполный parity | Медиаполитика, offline/reconnect, consent |
@@ -30,7 +30,7 @@ Private Multi-Persona selection, friendship hub и TTL availability уже им�
 
 ## Очередь незавершённых сквозных сценариев
 
-1. На Android **Space invitation inbox → принять/отклонить → перейти в Space**, с проверкой server state и ошибок; затем iOS перенос. Параллельно — Android physical QA уже реализованного Space create.
+1. Android **Space invitation inbox → accept/decline → войти** уже реализован и слит ([#56](https://github.com/cyrox007/PubChat-Android/pull/56)); необходимы Android physical QA и Web↔Android cross-client denial/revocation. **Следующее недостающее приложение — iOS**, где нужно реализовать этот сценарий. Не переписывать Android inbox.
 2. **E2EE Messenger** для нативных клиентов: при required E2EE отправка без device keys/verification должна fail-closed; запрещена тихая замена plaintext.
 3. **Safety Center**: жалобы, история, ограничения и апелляции с server-only правами и privacy projection.
 4. iOS **Spaces participation/realtime и create flow**, затем Activities/notifications/calls.
