@@ -26,6 +26,8 @@ final class MessengerViewModel: ObservableObject {
     private var pendingFrontID: String?
     private var pendingText: String?
 
+    func isMine(_ message: MessengerMessage) -> Bool { message.senderUID == accountUID }
+
     var canSend: Bool {
         connection == "connected" && encryption?.allowsPlaintext == true
             && selectedDialog != nil && !sending && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
