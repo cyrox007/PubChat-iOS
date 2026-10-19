@@ -5,6 +5,7 @@ struct IdentityEnvelope: Decodable {
     let accessToken: String?
     let account: Account?
     let persona: Persona?
+    let privacy: IdentityPrivacy?
     let user: LegacyUser?
 
     enum CodingKeys: String, CodingKey {
