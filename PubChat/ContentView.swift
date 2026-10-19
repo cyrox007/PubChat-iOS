@@ -211,7 +211,7 @@ private struct MainTabsView: View {
                                 }
                                 .padding(16)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(.white,
+                                .background(PubChatDesign.surface,
                                     in: RoundedRectangle(cornerRadius: 20))
                                 .overlay(RoundedRectangle(cornerRadius: 20)
                                     .stroke(PubChatDesign.border, lineWidth: 1))
