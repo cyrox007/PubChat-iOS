@@ -8,6 +8,9 @@ final class SessionViewModel: ObservableObject {
     @Published private(set) var state: State = .restoring
     @Published private(set) var identity: IdentityEnvelope?
     @Published private(set) var spaces: [Space] = []
+    @Published private(set) var spaceCategories: [SpaceCategory] = []
+    @Published private(set) var selectedSpaceCategory: String?
+    @Published private(set) var spaceCategoryError: String?
     @Published private(set) var people: [Person] = []
     @Published private(set) var isBusy = false
     @Published private(set) var isLoadingDirectory = false
@@ -91,6 +94,26 @@ final class SessionViewModel: ObservableObject {
         }
     }
 
+    func loadSpaceCategories() async {
+        guard let token = SecureStore.accessToken else { return }
+        spaceCategoryError = nil
+        do { spaceCategories = try await api.spaceCategories(accessToken: token) }
+        catch { spaceCategoryError = "Не удалось получить категории. Попробуйте снова." }
+    }
+
+    func selectSpaceCategory(_ slug: String?) async {
+        guard !isLoadingDirectory else { return }
+        if let slug, !spaceCategories.contains(where: { $0.slug == slug }) { return }
+        selectedSpaceCategory = slug
+        // Explicit filter changes must not display unrelated stale Space cards.
+        spaces = []
+        await reloadDirectory()
+    }
+
+    func spaceCategoryName(_ slug: String) -> String {
+        spaceCategories.first(where: { $0.slug == slug })?.name ?? slug
+    }
+
     func reloadDirectory() async {
         guard !isLoadingDirectory, let token = SecureStore.accessToken else { return }
         isLoadingDirectory = true
@@ -99,7 +122,7 @@ final class SessionViewModel: ObservableObject {
         // Spaces and People are independent destinations. A discovery failure
         // must not make a successfully fetched Spaces catalog look unavailable.
         do {
-            spaces = try await api.spaces(accessToken: token)
+            spaces = try await api.spaces(accessToken: token, category: selectedSpaceCategory)
         } catch {
             directoryError = error.localizedDescription
         }

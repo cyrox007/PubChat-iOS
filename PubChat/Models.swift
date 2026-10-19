@@ -69,7 +69,27 @@ struct Space: Decodable, Identifiable {
     let uid: String
     let name: String
     let description: String?
+    let categorySlugs: [String]?
     var id: String { uid }
+
+    enum CodingKeys: String, CodingKey {
+        case uid, name, description
+        case categorySlugs = "category_slugs"
+    }
+}
+
+struct SpaceCategory: Decodable, Identifiable, Equatable {
+    let slug: String
+    let name: String
+    let icon: String
+    let description: String?
+    let locale: String
+    let position: Int
+    var id: String { slug }
+}
+
+struct SpaceCategoryEnvelope: Decodable {
+    let categories: [SpaceCategory]
 }
 
 struct SpaceListEnvelope: Decodable {

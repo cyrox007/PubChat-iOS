@@ -150,6 +150,48 @@ private struct MainTabsView: View {
                         }
                         .padding(.horizontal, 18)
                         .padding(.top, 12)
+                        HStack(spacing: 10) {
+                            Menu {
+                                Button("Все категории") {
+                                    Task { await session.selectSpaceCategory(nil) }
+                                }
+                                ForEach(session.spaceCategories) { item in
+                                    Button(item.name) {
+                                        Task { await session.selectSpaceCategory(item.slug) }
+                                    }
+                                }
+                            } label: {
+                                Label(
+                                    session.selectedSpaceCategory.map(session.spaceCategoryName) ?? "Все категории",
+                                    systemImage: "line.3.horizontal.decrease.circle"
+                                )
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(PubChatDesign.primary)
+                                .padding(.horizontal, 12)
+                                .frame(minHeight: 44)
+                                .background(PubChatDesign.surface,
+                                            in: RoundedRectangle(cornerRadius: 12))
+                            }
+                            .accessibilityLabel("Выбрать категорию пространства")
+                            .disabled(session.isLoadingDirectory || session.spaceCategories.isEmpty)
+                            Spacer(minLength: 0)
+                            if session.selectedSpaceCategory != nil {
+                                Button("Сбросить") {
+                                    Task { await session.selectSpaceCategory(nil) }
+                                }
+                                .font(.caption.weight(.semibold))
+                                .disabled(session.isLoadingDirectory)
+                            }
+                        }
+                        .padding(.horizontal, 18)
+                        if let categoryError = session.spaceCategoryError {
+                            HStack {
+                                Text(categoryError).font(.caption)
+                                Button("Повторить") { Task { await session.loadSpaceCategories() } }
+                            }
+                            .foregroundStyle(PubChatDesign.secondaryInk)
+                            .padding(.horizontal, 20)
+                        }
                         if !session.spaces.isEmpty {
                             Text("В каталоге: \(session.spaces.count)")
                                 .font(.caption.weight(.semibold))
@@ -201,7 +243,10 @@ private struct MainTabsView: View {
                                 .padding(.horizontal, 16)
                             }
                             ForEach(session.spaces) { space in
-                                SpaceDirectoryCard(space: space)
+                                SpaceDirectoryCard(
+                                    space: space,
+                                    categoryNames: (space.categorySlugs ?? []).map(session.spaceCategoryName)
+                                )
                                     .padding(.horizontal, 16)
                             }
                         }
@@ -277,7 +322,10 @@ private struct MainTabsView: View {
             }
             .tabItem { Label("Профиль", systemImage: "person.crop.circle.fill") }
         }
-        .task { await session.reloadDirectory() }
+        .task {
+            await session.loadSpaceCategories()
+            await session.reloadDirectory()
+        }
         .overlay(alignment: .top) {
             if session.isLoadingDirectory {
                 HStack(spacing: 10) {
@@ -294,6 +342,7 @@ private struct MainTabsView: View {
 
 private struct SpaceDirectoryCard: View {
     let space: Space
+    let categoryNames: [String]
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -309,9 +358,16 @@ private struct SpaceDirectoryCard: View {
                 Text(space.name)
                     .font(.headline)
                     .foregroundStyle(PubChatDesign.ink)
-                Text("Пространство для общения")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PubChatDesign.primary)
+                if !categoryNames.isEmpty {
+                    Text(categoryNames.joined(separator: " · "))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PubChatDesign.primary)
+                        .lineLimit(2)
+                } else {
+                    Text("Пространство для общения")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PubChatDesign.primary)
+                }
                 if let description = space.description, !description.isEmpty {
                     Text(description)
                         .font(.subheadline)
