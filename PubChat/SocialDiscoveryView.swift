@@ -53,14 +53,51 @@ struct SocialDiscoveryView: View {
             }
 
             if let errorText {
-                Section { Text(errorText).foregroundStyle(.red) }
-                Section { Button("Повторить") { Task { await load() } } }
+                Section {
+                    PubChatStateCard(
+                        symbol: "wifi.exclamationmark",
+                        title: people.isEmpty ? "Не удалось найти людей" : "Не удалось обновить список",
+                        message: people.isEmpty
+                            ? "Не получилось загрузить каталог. \(errorText)"
+                            : "Показаны последние результаты. \(errorText)",
+                        actionTitle: "Повторить",
+                        action: { Task { await load() } }
+                    )
+                }
             }
-            if loading {
-                Section { ProgressView("Ищем людей…") }
+            if loading && people.isEmpty {
+                Section {
+                    ForEach(0..<4, id: \.self) { _ in
+                        HStack(spacing: 12) {
+                            Circle().fill(PubChatDesign.primary.opacity(0.1))
+                                .frame(width: 48, height: 48)
+                            VStack(alignment: .leading, spacing: 10) {
+                                Capsule().fill(PubChatDesign.primary.opacity(0.1))
+                                    .frame(width: 142, height: 15)
+                                Capsule().fill(PubChatDesign.primary.opacity(0.07))
+                                    .frame(width: 210, height: 11)
+                            }
+                        }
+                        .padding(.vertical, 10)
+                        .accessibilityLabel("Загрузка списка людей")
+                    }
+                }
+            } else if loading {
+                Section { ProgressView("Обновляем список людей…") }
             } else if people.isEmpty && errorText == nil {
                 Section {
-                    ContentUnavailableView("Люди не найдены", systemImage: "person.2")
+                    PubChatStateCard(
+                        symbol: "person.2",
+                        title: "Люди не найдены",
+                        message: "Измените поиск или сбросьте фильтры, чтобы увидеть другие профили.",
+                        actionTitle: "Сбросить фильтры",
+                        action: {
+                            query = ""
+                            intent = "all"
+                            availableNow = false
+                            Task { await load() }
+                        }
+                    )
                 }
             }
 
@@ -68,19 +105,40 @@ struct SocialDiscoveryView: View {
                 NavigationLink {
                     PersonDetailView(person: person)
                 } label: {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(person.displayName).font(.headline)
-                        if let handle = person.handle { Text("@\(handle)").font(.caption).foregroundStyle(.secondary) }
-                        if let status = person.availability {
-                            Label(intentName(status.intent), systemImage: "bolt.fill")
-                                .font(.caption).foregroundStyle(.green)
-                            if let note = status.note, !note.isEmpty { Text(note).font(.subheadline) }
-                        } else if let intent = person.socialIntent {
-                            Text(intentName(intent)).font(.caption).foregroundStyle(.secondary)
+                    HStack(alignment: .top, spacing: 12) {
+                        Text(String(person.displayName.prefix(1)).uppercased())
+                            .font(.headline.bold())
+                            .foregroundStyle(PubChatDesign.primary)
+                            .frame(width: 48, height: 48)
+                            .background(PubChatDesign.primary.opacity(0.1),
+                                        in: RoundedRectangle(cornerRadius: 16))
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(person.displayName)
+                                .font(.headline)
+                                .foregroundStyle(PubChatDesign.ink)
+                            if let handle = person.handle {
+                                Text("@\(handle)").font(.caption)
+                                    .foregroundStyle(PubChatDesign.secondaryInk)
+                            }
+                            if let status = person.availability {
+                                Label(intentName(status.intent), systemImage: "bolt.fill")
+                                    .font(.caption).foregroundStyle(PubChatDesign.primary)
+                                if let note = status.note, !note.isEmpty {
+                                    Text(note).font(.subheadline)
+                                }
+                            } else if let intent = person.socialIntent {
+                                Text(intentName(intent)).font(.caption)
+                                    .foregroundStyle(PubChatDesign.secondaryInk)
+                            }
+                            if let bio = person.bio, !bio.isEmpty {
+                                Text(bio).font(.subheadline).lineLimit(2)
+                            }
                         }
-                        if let bio = person.bio, !bio.isEmpty { Text(bio).lineLimit(2) }
-                    }.padding(.vertical, 4)
+                    }
+                    .padding(.vertical, 6)
                 }
+                .listRowBackground(PubChatDesign.surface)
             }
             if people.count < total {
                 Section {
@@ -90,6 +148,8 @@ struct SocialDiscoveryView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(PubChatDesign.background)
         .searchable(text: $query, prompt: "Имя, @handle или интересы")
         .onSubmit(of: .search) { Task { await load() } }
         .navigationTitle("Люди")
