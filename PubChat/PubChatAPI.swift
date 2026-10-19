@@ -62,6 +62,53 @@ final class PubChatAPI {
         return result.people
     }
 
+    func messengerDialogs(accessToken: String) async throws -> [MessengerDialog] {
+        let (result, _): (MessengerDialogsEnvelope, String?) =
+            try await request("GET", "/messenger/dialogs", accessToken: accessToken)
+        return result.dialogs
+    }
+
+    func messengerEncryption(peerUID: String, accessToken: String) async throws -> MessengerEncryptionPolicy {
+        guard UUID(uuidString: peerUID) != nil else {
+            throw APIProblem(status: -1, reason: "Неверный идентификатор собеседника.")
+        }
+        let (result, _): (MessengerEncryptionEnvelope, String?) =
+            try await request("GET", "/messenger/conversations/\(peerUID)/encryption",
+                              accessToken: accessToken)
+        return result.encryption
+    }
+
+    func messengerTicket(accessToken: String) async throws -> MessengerTicket {
+        let body = try JSONSerialization.data(withJSONObject: ["target": "messenger"])
+        let (ticket, _): (MessengerTicket, String?) =
+            try await request("POST", "/realtime/v2/tickets", body: body, accessToken: accessToken)
+        guard !ticket.ticket.isEmpty, ticket.websocketPath == "/ws/v2/messenger" else {
+            throw APIProblem(status: -1, reason: "Недействительный адрес Messenger.")
+        }
+        return ticket
+    }
+
+    /// A short-lived ticket is sent only in the first socket frame, never in URLs.
+    func messengerSocketURL(for ticket: MessengerTicket) throws -> URL {
+        guard ticket.websocketPath == "/ws/v2/messenger",
+              let scheme = baseURL.scheme,
+              scheme == "https" || scheme == "http" else {
+            throw APIProblem(status: -1, reason: "Неподдерживаемый realtime-адрес.")
+        }
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
+        components?.scheme = scheme == "https" ? "wss" : "ws"
+        let prefix = baseURL.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        components?.path = "/" + ([prefix, ticket.websocketPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))]
+            .filter { !$0.isEmpty }.joined(separator: "/"))
+        components?.query = nil
+        components?.fragment = nil
+        guard let url = components?.url else {
+            throw APIProblem(status: -1, reason: "Не удалось открыть Messenger.")
+        }
+        return url
+    }
+
+
     func discover(
         query: String = "", intent: String? = nil, availableNow: Bool = false,
         offset: Int = 0, accessToken: String
