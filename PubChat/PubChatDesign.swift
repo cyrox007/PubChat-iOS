@@ -1,15 +1,44 @@
 import SwiftUI
+import UIKit
 
 /// Shared visual contract of the 18 October PubChat mobile design boards.
 /// Functional capabilities are still controlled by the backend and feature flags.
 enum PubChatDesign {
-    static let primary = Color(red: 96/255, green: 69/255, blue: 246/255)
+    private static func adaptive(light: UIColor, dark: UIColor) -> Color {
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? dark : light
+        })
+    }
+
+    static let primary = adaptive(
+        light: UIColor(red: 99/255, green: 71/255, blue: 245/255, alpha: 1),
+        dark: UIColor(red: 154/255, green: 134/255, blue: 255/255, alpha: 1)
+    )
     static let deepIndigo = Color(red: 52/255, green: 33/255, blue: 164/255)
-    static let cyan = Color(red: 6/255, green: 199/255, blue: 236/255)
-    static let background = Color(red: 247/255, green: 248/255, blue: 254/255)
-    static let ink = Color(red: 17/255, green: 25/255, blue: 54/255)
-    static let secondaryInk = Color(red: 100/255, green: 113/255, blue: 142/255)
-    static let border = Color(red: 231/255, green: 234/255, blue: 246/255)
+    static let cyan = adaptive(
+        light: UIColor(red: 18/255, green: 188/255, blue: 213/255, alpha: 1),
+        dark: UIColor(red: 84/255, green: 215/255, blue: 233/255, alpha: 1)
+    )
+    static let background = adaptive(
+        light: UIColor(red: 246/255, green: 247/255, blue: 255/255, alpha: 1),
+        dark: UIColor(red: 13/255, green: 17/255, blue: 37/255, alpha: 1)
+    )
+    static let surface = adaptive(
+        light: .white,
+        dark: UIColor(red: 23/255, green: 29/255, blue: 52/255, alpha: 1)
+    )
+    static let ink = adaptive(
+        light: UIColor(red: 24/255, green: 32/255, blue: 61/255, alpha: 1),
+        dark: UIColor(red: 245/255, green: 246/255, blue: 255/255, alpha: 1)
+    )
+    static let secondaryInk = adaptive(
+        light: UIColor(red: 105/255, green: 115/255, blue: 143/255, alpha: 1),
+        dark: UIColor(red: 180/255, green: 191/255, blue: 219/255, alpha: 1)
+    )
+    static let border = adaptive(
+        light: UIColor(red: 226/255, green: 230/255, blue: 245/255, alpha: 1),
+        dark: UIColor(red: 52/255, green: 61/255, blue: 89/255, alpha: 1)
+    )
     static let danger = Color(red: 240/255, green: 68/255, blue: 97/255)
     static let success = Color(red: 22/255, green: 164/255, blue: 108/255)
     static let darkBackground = Color(red: 15/255, green: 20/255, blue: 38/255)
@@ -71,6 +100,6 @@ struct PubChatStateCard: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(.white, in: RoundedRectangle(cornerRadius: 22))
+        .background(PubChatDesign.surface, in: RoundedRectangle(cornerRadius: 22))
     }
 }
