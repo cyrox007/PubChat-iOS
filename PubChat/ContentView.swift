@@ -313,13 +313,20 @@ private struct MainTabsView: View {
                             }
                         }
                     }
-                    Section {
-                        Text("Это базовый iOS-клиент. Переписки, игры, управление Spaces и настройки приватности будут добавляться по общей матрице Web / Android / iOS.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
                     Section("Persona") {
                         NavigationLink("Мои образы") { PersonaManagerView() }
+                    }
+                    Section("Приватность") {
+                        NavigationLink {
+                            DMPrivacySettingsView()
+                        } label: {
+                            Label("Кто может написать мне", systemImage: "hand.raised")
+                        }
+                    }
+                    Section {
+                        Text("Это развивающийся iOS-клиент. Некоторые функции Spaces, игр и безопасности пока доступны только в других клиентах.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                     Section {
                         Button("Выйти из аккаунта", role: .destructive) {

@@ -306,6 +306,55 @@ final class PubChatTests: XCTestCase {
         XCTAssertNil(json["is_primary"])
     }
 
+    func testDMConsentProjectionUsesServerOwnedPrimaryPersonaPolicy() throws {
+        let json = """
+        {"status":"ok","account":{"uid":"account-a"},
+         "persona":{"uid":"persona-a","handle":"main","display_name":"Main","is_primary":true},
+         "privacy":{"profile_visibility":"public","dm_policy":"shared_spaces"}}
+        """
+        let decoded = try JSONDecoder().decode(IdentityEnvelope.self, from: Data(json.utf8))
+        XCTAssertEqual(decoded.privacy?.dmPolicy, .sharedSpaces)
+        XCTAssertEqual(decoded.persona?.isPrimary, true)
+    }
+
+    func testDMConsentPatchSendsOnlyRequestedField() throws {
+        for policy in DMConsentPolicy.allCases {
+            let encoded = try JSONEncoder().encode(DMPrivacyUpdatePayload(dmPolicy: policy))
+            let payload = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+            )
+            XCTAssertEqual(payload.count, 1)
+            XCTAssertEqual(payload["dm_policy"] as? String, policy.rawValue)
+            XCTAssertNil(payload["profile_visibility"])
+            XCTAssertNil(payload["account_uid"])
+            XCTAssertNil(payload["persona_uid"])
+        }
+    }
+
+    func testUnrecognizedDMConsentNeverFallsBackToEveryone() throws {
+        let json = """
+        {"status":"ok","account":{"uid":"account-a"},
+         "persona":{"uid":"persona-a","handle":"main","display_name":"Main","is_primary":true},
+         "privacy":{"dm_policy":"unknown_or_broken"}}
+        """
+        XCTAssertThrowsError(
+            try JSONDecoder().decode(IdentityEnvelope.self, from: Data(json.utf8))
+        )
+    }
+
+    func testSecondaryPersonaPolicyRemainsDistinctFromAccountPolicy() throws {
+        let json = """
+        {"status":"ok","account":{"uid":"account-a"},
+         "persona":{"uid":"persona-b","handle":"secondary","display_name":"Secondary","is_primary":false},
+         "privacy":{"dm_policy":"nobody"}}
+        """
+        let identity = try JSONDecoder().decode(IdentityEnvelope.self, from: Data(json.utf8))
+        XCTAssertEqual(identity.persona?.isPrimary, false)
+        XCTAssertEqual(identity.privacy?.dmPolicy, .nobody)
+        let forbidden = APIProblem(status: 409, reason: "secondary_privacy_not_supported")
+        XCTAssertTrue((forbidden.errorDescription ?? "").contains("secondary_privacy_not_supported"))
+    }
+
     func testServerAccessRestrictionDoesNotBecomeAFalseBadPasswordMessage() {
         let problem = APIProblem(status: 403, reason: "account_access_restricted")
         XCTAssertTrue((problem.errorDescription ?? "").contains("account_access_restricted"))

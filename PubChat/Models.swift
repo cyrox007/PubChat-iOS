@@ -5,10 +5,11 @@ struct IdentityEnvelope: Decodable {
     let accessToken: String?
     let account: Account?
     let persona: Persona?
+    let privacy: IdentityPrivacy?
     let user: LegacyUser?
 
     enum CodingKeys: String, CodingKey {
-        case status, account, persona, user
+        case status, account, persona, privacy, user
         case accessToken = "access_token"
     }
 
@@ -39,6 +40,51 @@ struct IdentityEnvelope: Decodable {
             case socialIntent = "social_intent"
             case isPrimary = "is_primary"
         }
+    }
+}
+
+/// Who may initiate a direct conversation is a server-owned privacy policy.
+enum DMConsentPolicy: String, Codable, CaseIterable, Identifiable {
+    case everyone
+    case sharedSpaces = "shared_spaces"
+    case mutual
+    case nobody
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .everyone: return "Все участники"
+        case .sharedSpaces: return "Из общих пространств"
+        case .mutual: return "Только взаимные контакты"
+        case .nobody: return "Никто"
+        }
+    }
+
+    var explanation: String {
+        switch self {
+        case .everyone: return "Новые обращения возможны от участников платформы с учётом блокировок и серверных ограничений."
+        case .sharedSpaces: return "Обратиться могут участники ваших общих пространств, если это разрешает сервер."
+        case .mutual: return "Только участники с взаимной связью, подтверждённой сервером."
+        case .nobody: return "Запретить новые обращения. Этот выбор не отменяет другие настройки безопасности."
+        }
+    }
+}
+
+struct IdentityPrivacy: Decodable {
+    let dmPolicy: DMConsentPolicy
+
+    enum CodingKeys: String, CodingKey {
+        case dmPolicy = "dm_policy"
+    }
+}
+
+/// Deliberately patch only DM policy, preserving all other privacy settings.
+struct DMPrivacyUpdatePayload: Encodable {
+    let dmPolicy: DMConsentPolicy
+
+    enum CodingKeys: String, CodingKey {
+        case dmPolicy = "dm_policy"
     }
 }
 

@@ -144,6 +144,39 @@ final class SessionViewModel: ObservableObject {
         return token
     }
 
+    /// Always refresh from the server; a cached identity is not an authority
+    /// for current DM privacy. The secondary Persona cannot change this policy.
+    func fetchDMPrivacy() async throws -> IdentityPrivacy {
+        let token = try socialAccessToken()
+        guard let accountUID = identity?.account?.uid,
+              let personaUID = identity?.persona?.uid else {
+            throw APIProblem(status: 401, reason: "Не найдена текущая Persona.")
+        }
+        let fresh = try await api.me(accessToken: token)
+        guard fresh.status == "ok", fresh.account?.uid == accountUID,
+              fresh.persona?.uid == personaUID, let privacy = fresh.privacy else {
+            throw APIProblem(status: -1, reason: "Сервер не подтвердил настройки приватности.")
+        }
+        identity = fresh
+        return privacy
+    }
+
+    func saveDMPrivacy(_ policy: DMConsentPolicy) async throws -> IdentityPrivacy {
+        let token = try socialAccessToken()
+        guard let accountUID = identity?.account?.uid,
+              let personaUID = identity?.persona?.uid else {
+            throw APIProblem(status: 401, reason: "Не найдена текущая Persona.")
+        }
+        let updated = try await api.updateDMPolicy(policy, accessToken: token)
+        guard updated.status == "ok", updated.account?.uid == accountUID,
+              updated.persona?.uid == personaUID, let privacy = updated.privacy,
+              privacy.dmPolicy == policy else {
+            throw APIProblem(status: -1, reason: "Сервер не подтвердил изменение приватности.")
+        }
+        identity = updated
+        return privacy
+    }
+
     func discoverPeople(
         query: String, intent: String?, availableNow: Bool, offset: Int = 0
     ) async throws -> DiscoveryPage {
