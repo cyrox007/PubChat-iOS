@@ -150,6 +150,13 @@ private struct MainTabsView: View {
                         }
                         .padding(.horizontal, 18)
                         .padding(.top, 12)
+                        if !session.spaces.isEmpty {
+                            Text("В каталоге: \(session.spaces.count)")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(PubChatDesign.primary)
+                                .padding(.horizontal, 20)
+                                .accessibilityLabel("Пространств в каталоге: \(session.spaces.count)")
+                        }
 
                         if session.isLoadingDirectory && session.spaces.isEmpty {
                             ForEach(0..<4, id: \.self) { _ in
@@ -183,39 +190,19 @@ private struct MainTabsView: View {
                             )
                             .padding(.horizontal, 16)
                         } else {
-                            if session.directoryError != nil {
-                                Label("Не удалось обновить каталог. Показаны последние данные.",
-                                      systemImage: "exclamationmark.triangle")
-                                    .font(.caption)
-                                    .foregroundStyle(PubChatDesign.danger)
-                                    .padding(.horizontal, 20)
+                            if let directoryError = session.directoryError {
+                                PubChatStateCard(
+                                    symbol: "wifi.exclamationmark",
+                                    title: "Не удалось обновить каталог",
+                                    message: "Показаны последние загруженные пространства. \(directoryError)",
+                                    actionTitle: "Повторить",
+                                    action: { Task { await session.reloadDirectory() } }
+                                )
+                                .padding(.horizontal, 16)
                             }
                             ForEach(session.spaces) { space in
-                                HStack(alignment: .top, spacing: 14) {
-                                    Image(systemName: "person.3.fill")
-                                        .font(.title2)
-                                        .foregroundStyle(.white)
-                                        .frame(width: 58, height: 58)
-                                        .background(PubChatDesign.brandGradient,
-                                                    in: RoundedRectangle(cornerRadius: 16))
-                                    VStack(alignment: .leading, spacing: 7) {
-                                        Text(space.name).font(.headline)
-                                            .foregroundStyle(PubChatDesign.ink)
-                                        if let description = space.description, !description.isEmpty {
-                                            Text(description).font(.subheadline)
-                                                .foregroundStyle(PubChatDesign.secondaryInk)
-                                                .lineLimit(3)
-                                        }
-                                    }
-                                    Spacer(minLength: 0)
-                                }
-                                .padding(16)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(PubChatDesign.surface,
-                                    in: RoundedRectangle(cornerRadius: 20))
-                                .overlay(RoundedRectangle(cornerRadius: 20)
-                                    .stroke(PubChatDesign.border, lineWidth: 1))
-                                .padding(.horizontal, 16)
+                                SpaceDirectoryCard(space: space)
+                                    .padding(.horizontal, 16)
                             }
                         }
                     }
@@ -230,7 +217,9 @@ private struct MainTabsView: View {
                             Task { await session.reloadDirectory() }
                         } label: {
                             Image(systemName: "arrow.clockwise")
-                        }.disabled(session.isLoadingDirectory)
+                        }
+                        .accessibilityLabel("Обновить каталог пространств")
+                        .disabled(session.isLoadingDirectory)
                     }
                 }
             }
@@ -297,5 +286,45 @@ private struct MainTabsView: View {
                 .padding(.top, 6)
             }
         }
+    }
+}
+
+private struct SpaceDirectoryCard: View {
+    let space: Space
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "person.3.fill")
+                .font(.title2)
+                .foregroundStyle(.white)
+                .frame(width: 58, height: 58)
+                .background(PubChatDesign.brandGradient,
+                            in: RoundedRectangle(cornerRadius: 16))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(space.name)
+                    .font(.headline)
+                    .foregroundStyle(PubChatDesign.ink)
+                Text("Пространство для общения")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PubChatDesign.primary)
+                if let description = space.description, !description.isEmpty {
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundStyle(PubChatDesign.secondaryInk)
+                        .lineLimit(3)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PubChatDesign.surface,
+                    in: RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20)
+            .stroke(PubChatDesign.border, lineWidth: 1))
+        // iOS currently has a catalog-only Spaces API. No inert join button.
+        .accessibilityElement(children: .combine)
     }
 }
