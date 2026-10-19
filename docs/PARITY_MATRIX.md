@@ -1,58 +1,43 @@
-# Product parity — Web / Android / iOS
+# Паритет PubChat — Web / Android / iOS (сверка 19.10.2026)
 
-**Критерий 1.0: Web = Android = iOS по функциональности пользовательских
-сценариев.** Временное опережение Web допустимо в feature branches, но
-эпик нельзя считать завершённым до проверенного сквозного паритета.
+**Условие 1.0 — одинаковые полезные пользовательские сценарии и правила отказа во всех трёх клиентах**, а не одинаковые макеты. Источник общей очереди и фактических PR: [живой реестр в PubChat](https://github.com/cyrox007/PubChat/blob/main/docs/cross-client-delivery-status.md).
 
-Это стартовая матрица из ревизии кодовой базы октября 2026 г. Символ
-«код» не означает production readiness.
+**Важно:** «код» и «CI green» не равны физической проверке или production readiness. Приводим слитые срезы, не откатывая их в «нет».
 
-| Сценарий | Web / Backend | Android | iOS bootstrap |
-|---|---|---|---|
-| Регистрация и вход Identity v2 | Код | Код | Код |
-| Ротация сессий и выход | Код | Код | Код (без device-revoke UI) |
-| Persona: основные поля | Код | Частично | Чтение |
-| Multi-Persona, выбор и переключение | Продуктовая доработка | Нет | Нет |
-| Каталог People | Код | Код | Чтение |
-| Социальные связи: follow / friendship / blocks | Код | Код в Persona | Код в Persona (требуются device tests) |
-| Настройки приватности DM | Код | Частично | Код: чтение/изменение DM policy, нужны device tests |
-| Spaces каталог, вступление/выход | Код | Код | Каталог |
-| Spaces история/realtime | Код | Код | Нет |
-| Activities/события/игры | Код | Частично | Нет |
-| Messenger и вложения | Код | Частично | Нет |
-| E2EE DM | Web код, нужна сверка политики | Нет | Нет |
-| Звонки WebRTC | Код | Частично | Нет |
-| Уведомления | Web Push | FCM (настройка необходима) | APNs не реализован |
-| Reputation/achievements | Код | Частично | Нет |
-| Жалобы/санкции/апелляции | Код | Частично | Нет |
-| Монетизация/косметика | Частично | Частично | Нет |
-| Реальные device E2E испытания | Частично | Не завершены | Не начаты |
+| Сценарий | Web / Backend | Android | iOS | Что осталось |
+| --- | --- | --- | --- | --- |
+| Identity v2 / login/refresh/logout | Код | Код | Код | Реальные устройства, revoke и offline |
+| **Private Multi-Persona: создать/выбрать** | [PubChat #108](https://github.com/cyrox007/PubChat/pull/108) | [Android #35](https://github.com/cyrox007/PubChat-Android/pull/35) | [iOS #3](https://github.com/cyrox007/PubChat-iOS/pull/3) слит | Публичный Persona UID/address, author attribution, cross-privacy |
+| Friends / follows / blocks, friendship hub | Web [#109](https://github.com/cyrox007/PubChat/pull/109) | Android [#36](https://github.com/cyrox007/PubChat-Android/pull/36) | iOS [#4](https://github.com/cyrox007/PubChat-iOS/pull/4) | 401/403/409 + physical device QA |
+| People discovery, intent и TTL availability | Код | Код | Код | Устойчивость search/pagination/network и device QA |
+| **DM consent** `everyone/shared_spaces/mutual/nobody` | Identity v2 `/privacy` | Слито [#53](https://github.com/cyrox007/PubChat-Android/pull/53), `7160c5d` | Слито [#16](https://github.com/cyrox007/PubChat-iOS/pull/16), `23cce07`; simulator XCTest green | Device QA, блокировка/revocation/new conversation, не позволять обходить сервер |
+| Spaces каталог | Код | Код | Код (каталог) | iOS membership и room |
+| **Создать Space с параметрами** | `POST /spaces/v1` | Слито [#51](https://github.com/cyrox007/PubChat-Android/pull/51), `05653df` | **Нет native flow** | iOS реализация; Android physical QA |
+| Space invitations: inbox, accept/reject/open | Web + API | Нет полного inbox flow | Нет полного flow | **Следующий Android пользовательский срез** |
+| Spaces realtime/history/management | Код | Код (не полная Web parity) | **Нет** | iOS полноценное участие |
+| Activities/игры/повторы | Код | Частично | Нет | Cross-client recurring/timezone |
+| Messenger DM basics | Код | Код (частично) | Начальный Messenger, неполный parity | Медиаполитика, offline/reconnect, consent |
+| **E2EE DM** | Web security policy | **Нет полноценного native E2EE** | **Нет** | P0: device crypto, no plaintext fallback, verification |
+| Calls WebRTC | Код | Частично | Нет | Физический network/media QA |
+| Notifications | Web Push/preferences | FCM foundation | Activity UI, APNs отсутствует | Provider и real-device delivery |
+| **Safety Center/appeals** | Web + Trust & Safety | Нет полного flow | Нет полного flow | P0 user safety |
+| Device/session management | Web | Нет полного editor | Нет device-revoke UI | Revocation/device tests |
+| Real devices | Browser tests | Не подтверждена вся матрица | Simulator CI != физический iPhone | Общий 1.0 release gate |
 
-## Social Core 0.7 — первый срез
+## Уже выполнено — не начинать заново
 
-Реализованы действия связи с Persona через существующий backend на обеих
-нативных платформах. Сервер продолжает владеть Account-level правилами,
-а клиент получает обновлённую проекцию отношений после каждого действия.
+Private Multi-Persona selection, friendship hub и TTL availability уже имеют нативные реализации. **Четыре DM consent policy уже доступны в коде обеих мобильных платформ**, однако это не доказывает, что revoke/blocks одинаково работают с реальным Messenger. **Создание Space реализовано в Android**, перенос нужен на iOS, а не повтор на Android.
 
-**Не готово:** Multi-Persona, полное управление списками запросов/друзей,
-полный паритет приватности DM на Android и проверка iOS на реальном устройстве,
-нативные E2E сценарии на физических
-устройствах. Одна реализованная часть не означает завершения Social Core 0.7.
+## Очередь незавершённых сквозных сценариев
 
-## Разбивка релизной линии
+1. На Android **Space invitation inbox → принять/отклонить → перейти в Space**, с проверкой server state и ошибок; затем iOS перенос. Параллельно — Android physical QA уже реализованного Space create.
+2. **E2EE Messenger** для нативных клиентов: при required E2EE отправка без device keys/verification должна fail-closed; запрещена тихая замена plaintext.
+3. **Safety Center**: жалобы, история, ограничения и апелляции с server-only правами и privacy projection.
+4. iOS **Spaces participation/realtime и create flow**, затем Activities/notifications/calls.
+5. Social Core 0.7: публичные Multi-Persona identities, block/revoke tests и device-to-device parity.
 
-- **0.7 Social Core:** завершить Account/Persona/relationship UX и
-  полную разработку соответствующих сценариев во всех клиентах.
-- **0.8 Living Spaces:** realtime, активности, игры и память сообществ.
-- **0.9 Product Experience:** уведомления, достижения/репутация,
-  поддержка/безопасность и согласованная монетизация.
-- **1.0:** автоматические контрактные проверки и реальные матрицы
-  Web↔Android↔iOS на устройствах; App Store/Play review и выпуск.
+## Как поддерживать правду в репозитории
 
-Каждый новый endpoint или изменение модели требует фиксации API контракта,
-состояния трёх реализаций и отдельного integration/acceptance test. Для
-действий модерации/личных сообщений нельзя заменять серверные полномочия
-локальной логикой или обходить ошибки 401/403.
+Перед следующим PR проверить HEAD всех трёх репозиториев, связанные open/merged PR и [PubChat #107](https://github.com/cyrox007/PubChat/issues/107), [#110](https://github.com/cyrox007/PubChat/issues/110), [Android #52](https://github.com/cyrox007/PubChat-Android/issues/52). В PR обновлять **этот файл и центральный реестр**, ссылаться на merge SHA и отдельно фиксировать code/CI/device QA. Не закрывать эпик до прохождения одинаковых success, 401/403/409, блокировки и отзыва разрешения на Web, Android и iOS. Локальный UI не подменяет server permissions.
 
-> Матрица — рабочая и подлежит сверке при каждом эпике. Пустая клетка —
-> известная задача, а не повод заявлять недоступную функцию готовой.
+**Следующий этап не выбирается по старому чекбоксу или по количеству экранов.** Приоритет — законченный безопасный пользовательский сценарий.
