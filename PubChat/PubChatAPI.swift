@@ -50,6 +50,16 @@ final class PubChatAPI {
         return result
     }
 
+    /// PATCH returns the complete self-only identity projection; permissions
+    /// remain enforced on the server for each message operation.
+    func updateDMPolicy(_ policy: DMConsentPolicy, accessToken: String) async throws -> IdentityEnvelope {
+        let body = try JSONEncoder().encode(DMPrivacyUpdatePayload(dmPolicy: policy))
+        let (result, _): (IdentityEnvelope, String?) = try await request(
+            "PATCH", "/identity/v2/privacy", body: body, accessToken: accessToken
+        )
+        return result
+    }
+
     func spaceCategories(accessToken: String) async throws -> [SpaceCategory] {
         let (result, _): (SpaceCategoryEnvelope, String?) =
             try await request("GET", "/spaces/v1/categories", accessToken: accessToken)
