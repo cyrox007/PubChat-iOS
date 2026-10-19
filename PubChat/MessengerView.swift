@@ -94,9 +94,15 @@ struct MessengerHubView: View {
                                             .accessibilityLabel("Непрочитанных: \(dialog.unreadCount)")
                                     }
                                 }
-                                .padding(.vertical, 6)
+                                .padding(12)
+                                .background(PubChatDesign.surface,
+                                            in: RoundedRectangle(cornerRadius: 18))
+                                .overlay(RoundedRectangle(cornerRadius: 18)
+                                    .stroke(PubChatDesign.border, lineWidth: 1))
                             }
-                            .listRowBackground(PubChatDesign.surface)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
+                            .listRowBackground(Color.clear)
                         }
                     }
                     .scrollContentBackground(.hidden)
