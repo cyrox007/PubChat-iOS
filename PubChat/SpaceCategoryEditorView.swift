@@ -11,6 +11,7 @@ struct SpaceCategoryEditorView: View {
     @State private var descriptionText: String
     @State private var selected: Set<String>
     @State private var saving = false
+    @State private var loadingCategories = false
     @State private var error: String?
     @State private var success: String?
 
@@ -31,7 +32,7 @@ struct SpaceCategoryEditorView: View {
     }
 
     private var canSave: Bool {
-        !saving && session.spaceCategoryError == nil && !session.spaceCategories.isEmpty &&
+        !saving && !loadingCategories && session.spaceCategoryError == nil &&
         archivedSelections.isEmpty && SpaceCategoryValidation.valid(Array(selected)) &&
         (isEditing || (3...80).contains(name.trimmingCharacters(in: .whitespacesAndNewlines).count)) &&
         descriptionText.count <= 500
@@ -67,7 +68,12 @@ struct SpaceCategoryEditorView: View {
                             Task { await session.loadSpaceCategories() }
                         }
                     } else if session.spaceCategories.isEmpty {
-                        ProgressView("Загружаем категории…")
+                        if loadingCategories { ProgressView("Загружаем категории…") }
+                        else {
+                            Text("Активных категорий пока нет. Пространство можно создать без них.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     } else {
                         ForEach(session.spaceCategories) { category in
                             Toggle(isOn: Binding(
@@ -143,7 +149,11 @@ struct SpaceCategoryEditorView: View {
             }
         }
         .task {
-            if session.spaceCategories.isEmpty { await session.loadSpaceCategories() }
+            if session.spaceCategories.isEmpty {
+                loadingCategories = true
+                await session.loadSpaceCategories()
+                loadingCategories = false
+            }
         }
     }
 
