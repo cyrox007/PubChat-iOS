@@ -9,7 +9,7 @@ struct IdentityEnvelope: Decodable {
     let user: LegacyUser?
 
     enum CodingKeys: String, CodingKey {
-        case status, account, persona, user
+        case status, account, persona, privacy, user
         case accessToken = "access_token"
     }
 
