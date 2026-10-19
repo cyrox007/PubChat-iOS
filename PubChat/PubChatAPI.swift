@@ -69,6 +69,39 @@ final class PubChatAPI {
         return result.spaces
     }
 
+    func createSpace(
+        name: String, description: String, categorySlugs: [String], accessToken: String
+    ) async throws -> Space {
+        guard SpaceCategoryValidation.valid(categorySlugs) else {
+            throw APIProblem(status: -1, reason: "Выберите до трёх действующих категорий.")
+        }
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (3...80).contains(trimmedName.count), description.count <= 500 else {
+            throw APIProblem(status: -1, reason: "Название: 3–80 символов, описание: до 500.")
+        }
+        let body = try JSONEncoder().encode(SpaceCreatePayload(
+            name: trimmedName,
+            description: description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? nil : description.trimmingCharacters(in: .whitespacesAndNewlines),
+            categorySlugs: categorySlugs
+        ))
+        let (result, _): (SpaceMutationEnvelope, String?) =
+            try await request("POST", "/spaces/v1", body: body, accessToken: accessToken)
+        return result.space
+    }
+
+    func updateSpaceCategories(
+        spaceUID: String, categorySlugs: [String], accessToken: String
+    ) async throws -> Space {
+        guard UUID(uuidString: spaceUID) != nil, SpaceCategoryValidation.valid(categorySlugs) else {
+            throw APIProblem(status: -1, reason: "Недопустимый список категорий.")
+        }
+        let body = try JSONEncoder().encode(SpaceCategoryUpdatePayload(categorySlugs: categorySlugs))
+        let (result, _): (SpaceMutationEnvelope, String?) =
+            try await request("PATCH", "/spaces/v1/\(spaceUID)", body: body, accessToken: accessToken)
+        return result.space
+    }
+
     func people(accessToken: String) async throws -> [Person] {
         let (result, _): (PeopleEnvelope, String?) =
             try await request("GET", "/social/v1/discover?limit=50", accessToken: accessToken)

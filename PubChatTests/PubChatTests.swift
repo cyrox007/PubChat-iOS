@@ -2,6 +2,47 @@ import XCTest
 @testable import PubChat
 
 final class PubChatTests: XCTestCase {
+    func testSpaceOwnerDetectionUsesAuthenticatedAccountOrOwnerMembership() throws {
+        let json = """
+        {"uid":"00000000-0000-4000-8000-000000000001","name":"Дизайн",
+         "description":null,"category_slugs":["design"],
+         "owner_uid":"00000000-0000-4000-8000-000000000099",
+         "viewer_membership":{"role":"owner","status":"active"}}
+        """
+        let space = try JSONDecoder().decode(Space.self, from: Data(json.utf8))
+        XCTAssertTrue(space.owned(by: "00000000-0000-4000-8000-000000000099"))
+        XCTAssertTrue(space.owned(by: "different-current-account"))
+        XCTAssertFalse(space.owned(by: nil))
+    }
+
+    func testSpaceCategoryEditorNeverSendsInvalidSelections() throws {
+        XCTAssertTrue(SpaceCategoryValidation.valid([]))
+        XCTAssertTrue(SpaceCategoryValidation.valid(["design", "technology", "games"]))
+        XCTAssertFalse(SpaceCategoryValidation.valid(["design", "design"]))
+        XCTAssertFalse(SpaceCategoryValidation.valid(["design", "technology", "games", "art"]))
+        XCTAssertFalse(SpaceCategoryValidation.valid(["../other"]))
+        XCTAssertFalse(SpaceCategoryValidation.valid(["bad slug"]))
+    }
+
+    func testSpaceCreationAndOwnerPatchPayloadsUseCategorySlugContract() throws {
+        let create = try JSONEncoder().encode(
+            SpaceCreatePayload(name: "Новый клуб", description: "Описание", categorySlugs: ["design"])
+        )
+        let createdObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: create) as? [String: Any]
+        )
+        XCTAssertEqual(createdObject["category_slugs"] as? [String], ["design"])
+        XCTAssertNil(createdObject["categorySlugs"])
+
+        let patch = try JSONEncoder().encode(
+            SpaceCategoryUpdatePayload(categorySlugs: [])
+        )
+        let patchObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: patch) as? [String: Any]
+        )
+        XCTAssertEqual(patchObject["category_slugs"] as? [String], [])
+    }
+
     func testNativeSpacesDecodeServerManagedCategoriesWithoutRequiringOldDataMigration() throws {
         let json = """
         {"spaces":[

@@ -70,11 +70,56 @@ struct Space: Decodable, Identifiable {
     let name: String
     let description: String?
     let categorySlugs: [String]?
+    let ownerUID: String?
+    let viewerMembership: SpaceViewerMembership?
     var id: String { uid }
+
+    func owned(by accountUID: String?) -> Bool {
+        guard let accountUID else { return false }
+        return ownerUID == accountUID || viewerMembership?.role == "owner"
+    }
 
     enum CodingKeys: String, CodingKey {
         case uid, name, description
         case categorySlugs = "category_slugs"
+        case ownerUID = "owner_uid"
+        case viewerMembership = "viewer_membership"
+    }
+}
+
+struct SpaceViewerMembership: Decodable {
+    let role: String?
+    let status: String?
+}
+
+struct SpaceMutationEnvelope: Decodable {
+    let space: Space
+}
+
+struct SpaceCreatePayload: Encodable {
+    let name: String
+    let description: String?
+    let categorySlugs: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case name, description
+        case categorySlugs = "category_slugs"
+    }
+}
+
+struct SpaceCategoryUpdatePayload: Encodable {
+    let categorySlugs: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case categorySlugs = "category_slugs"
+    }
+}
+
+enum SpaceCategoryValidation {
+    static func valid(_ slugs: [String]) -> Bool {
+        slugs.count <= 3 &&
+            Set(slugs).count == slugs.count &&
+            slugs.allSatisfy { $0.range(of: "^[a-z][a-z0-9-]{1,39}$", options: .regularExpression) != nil }
     }
 }
 
