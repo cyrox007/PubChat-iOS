@@ -239,10 +239,13 @@ private struct MainTabsView: View {
             }
             .tabItem { Label("Люди", systemImage: "person.2.fill") }
 
+            MessengerHubView()
+                .tabItem { Label("Чаты", systemImage: "bubble.left.and.bubble.right.fill") }
+
             NavigationStack {
                 NotificationCenterView()
             }
-            .tabItem { Label("Уведомления", systemImage: "bell.fill") }
+            .tabItem { Label("Активность", systemImage: "bell.fill") }
 
             NavigationStack {
                 Form {
