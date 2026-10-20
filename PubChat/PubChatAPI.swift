@@ -265,6 +265,59 @@ final class PubChatAPI {
         return result
     }
 
+    func apnsConfiguration(accessToken: String) async throws -> APNsConfigurationEnvelope {
+        let (result, _): (APNsConfigurationEnvelope, String?) = try await request(
+            "GET", "/notifications/v1/native-push/config", accessToken: accessToken
+        )
+        return result
+    }
+
+    func registerAPNsDevice(token: String, accessToken: String) async throws {
+        // Device tokens are opaque credentials issued by Apple; accept hex only.
+        guard token.range(of: "^[0-9a-fA-F]{32,512}$", options: .regularExpression) != nil,
+              token.count.isMultiple(of: 2) else {
+            throw APIProblem(status: -1, reason: "Недопустимый APNs-токен.")
+        }
+        let body = try JSONSerialization.data(withJSONObject: [
+            "installation_uid": SecureStore.deviceID,
+            "platform": "ios",
+            "provider": "apns",
+            "token": token,
+            "device_label": "iPhone",
+            "app_version": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1",
+        ])
+        let (result, _): (NativePushRegistrationEnvelope, String?) = try await request(
+            "POST", "/notifications/v1/native-push/devices", body: body, accessToken: accessToken
+        )
+        guard result.status == "ok", result.device.installationUID.lowercased() == SecureStore.deviceID.lowercased(),
+              result.device.platform == "ios", result.device.provider == "apns" else {
+            throw APIProblem(status: -1, reason: "Сервер не подтвердил APNs-регистрацию.")
+        }
+    }
+
+    func setAPNsMessagePreferences(_ enabled: Bool, accessToken: String) async throws {
+        let body = try JSONSerialization.data(withJSONObject: [
+            "native_push_messenger": enabled, "native_push_space": enabled,
+        ])
+        let (result, _): (MessagePushPreferencesEnvelope, String?) = try await request(
+            "PATCH", "/notifications/v1/message-preferences", body: body, accessToken: accessToken
+        )
+        guard result.status == "ok",
+              result.preferences.nativePushMessenger == enabled,
+              result.preferences.nativePushSpace == enabled else {
+            throw APIProblem(status: -1, reason: "Сервер не сохранил настройки Push.")
+        }
+    }
+
+    func removeAPNsDevice(accessToken: String) async throws {
+        let body = try JSONSerialization.data(withJSONObject: [
+            "installation_uid": SecureStore.deviceID,
+        ])
+        let _: (StatusEnvelope, String?) = try await request(
+            "POST", "/notifications/v1/native-push/devices/remove", body: body, accessToken: accessToken
+        )
+    }
+
     func syncNotificationInbox(accessToken: String) async throws {
         let _: (StatusEnvelope, String?) = try await request(
             "POST", "/notifications/v1/sync", accessToken: accessToken

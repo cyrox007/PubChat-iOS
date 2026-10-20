@@ -133,11 +133,12 @@ private struct AuthenticationView: View {
 
 private struct MainTabsView: View {
     @EnvironmentObject private var session: SessionViewModel
+    @State private var selectedTab = 0
     @State private var showCreateSpace = false
     @State private var editingSpace: Space?
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
@@ -279,6 +280,7 @@ private struct MainTabsView: View {
                 }
             }
             .tabItem { Label("Пространства", systemImage: "square.grid.2x2.fill") }
+            .tag(0)
 
             NavigationStack {
                 SocialDiscoveryView()
@@ -293,14 +295,17 @@ private struct MainTabsView: View {
                     }
             }
             .tabItem { Label("Люди", systemImage: "person.2.fill") }
+            .tag(1)
 
             MessengerHubView()
                 .tabItem { Label("Чаты", systemImage: "bubble.left.and.bubble.right.fill") }
+                .tag(2)
 
             NavigationStack {
                 NotificationCenterView()
             }
             .tabItem { Label("Активность", systemImage: "bell.fill") }
+            .tag(3)
 
             NavigationStack {
                 Form {
@@ -338,6 +343,18 @@ private struct MainTabsView: View {
                 .navigationTitle("Профиль")
             }
             .tabItem { Label("Профиль", systemImage: "person.crop.circle.fill") }
+            .tag(4)
+        }
+        .onAppear {
+            if let type = PubChatAppDelegate.consumePushDestination() {
+                if type == "messenger" { selectedTab = 2 }
+                if type == "space_reply" { selectedTab = 0 }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pubChatPushOpened)) { signal in
+            let type = signal.userInfo?["type"] as? String
+            if type == "messenger" { selectedTab = 2 }
+            if type == "space_reply" { selectedTab = 0 }
         }
         .task {
             await session.loadSpaceCategories()

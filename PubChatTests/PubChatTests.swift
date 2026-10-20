@@ -2,6 +2,43 @@ import XCTest
 @testable import PubChat
 
 final class PubChatTests: XCTestCase {
+    func testAPNsConfigurationAndPreferenceResponseDecodeExactServerContract() throws {
+        let config = try JSONDecoder().decode(APNsConfigurationEnvelope.self, from: Data(
+            #"{"status":"ok","android":{"provider":"fcm","enabled":true},"ios":{"provider":"apns","enabled":true},"privacy":{"message_content_in_push":false}}"#.utf8
+        ))
+        XCTAssertEqual(config.ios.provider, "apns")
+        XCTAssertTrue(config.ios.enabled)
+        let projection = try JSONDecoder().decode(NativePushRegistrationEnvelope.self, from: Data(
+            #"{"status":"ok","device":{"installation_uid":"11111111-1111-4111-8111-111111111111","provider":"apns","platform":"ios"}}"#.utf8
+        ))
+        XCTAssertEqual(projection.device.installationUID, "11111111-1111-4111-8111-111111111111")
+        XCTAssertEqual(projection.device.provider, "apns")
+        let preferences = try JSONDecoder().decode(MessagePushPreferencesEnvelope.self, from: Data(
+            #"{"status":"ok","preferences":{"native_push_messenger":true,"native_push_space":true}}"#.utf8
+        ))
+        XCTAssertTrue(preferences.preferences.nativePushMessenger)
+        XCTAssertTrue(preferences.preferences.nativePushSpace)
+    }
+
+    func testDistinctAPNsNotificationSoundsAreBundled() {
+        let privateURL = Bundle.main.url(forResource: "pubchat_private", withExtension: "wav")
+        let spaceURL = Bundle.main.url(forResource: "pubchat_space", withExtension: "wav")
+        XCTAssertNotNil(privateURL, "iOS push sound for personal messages must be packaged")
+        XCTAssertNotNil(spaceURL, "iOS push sound for Space replies must be packaged")
+        XCTAssertNotEqual(privateURL, spaceURL)
+    }
+
+    func testNativePushOptInNeverLeaksBetweenAccounts() throws {
+        let a = "11111111-1111-4111-8111-111111111111"
+        let b = "22222222-2222-4222-8222-222222222222"
+        XCTAssertNotEqual(NativePushPreferences.key(for: a), NativePushPreferences.key(for: b))
+        NativePushPreferences.remember(true, accountUID: a)
+        NativePushPreferences.remember(false, accountUID: b)
+        XCTAssertTrue(NativePushPreferences.optedIn(accountUID: a))
+        XCTAssertFalse(NativePushPreferences.optedIn(accountUID: b))
+        NativePushPreferences.remember(false, accountUID: a)
+    }
+
     func testSpaceOwnerDetectionUsesAuthenticatedAccountOrOwnerMembership() throws {
         let json = """
         {"uid":"00000000-0000-4000-8000-000000000001","name":"Дизайн",

@@ -13,6 +13,24 @@ struct NotificationCenterView: View {
 
     var body: some View {
         List {
+            Section("Сообщения вне приложения") {
+                Text("Получайте системные уведомления со звуком, когда PubChat свёрнут или закрыт. Личные сообщения и ответы в пространствах звучат по-разному; содержимое переписки не передаётся в Push.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if session.nativePushEnabled {
+                    Button("Отключить Push на этом iPhone") {
+                        Task { await session.disableNativePush() }
+                    }
+                } else {
+                    Button("Включить Push для сообщений и ответов") {
+                        Task { await session.requestNativePushPermission() }
+                    }
+                }
+                if let status = session.nativePushStatus {
+                    Text(status).font(.caption).foregroundStyle(.secondary)
+                }
+                Text("Требуется разрешение iOS и настроенный сервер APNs. В беззвучном режиме и режиме фокусирования звук определяет iOS.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
             Section("Напоминания") {
                 Toggle("Дни рождения друзей", isOn: Binding(
                     get: { birthdayEnabled },
