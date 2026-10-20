@@ -345,6 +345,11 @@ private struct MainTabsView: View {
             .tabItem { Label("Профиль", systemImage: "person.crop.circle.fill") }
             .tag(4)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .pubChatPushOpened)) { signal in
+            let type = signal.userInfo?["type"] as? String
+            if type == "messenger" { selectedTab = 2 }
+            if type == "space_reply" { selectedTab = 0 }
+        }
         .task {
             await session.loadSpaceCategories()
             await session.reloadDirectory()
