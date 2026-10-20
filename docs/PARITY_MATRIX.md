@@ -36,6 +36,14 @@ Private Multi-Persona selection, friendship hub и TTL availability уже им�
 
 **iOS status: PLANNED.** SwiftUI использует тот же backend API; native touch/Apple Pencil canvas, upload progress, swipe reels, Stories и CDN/media permissions реализуются по будущим PR. Никаких утверждений о готовности без кода/CI/physical iPhone; P0 Safety/E2EE остаются незавершёнными.
 
+## Ожидаемая Unified Moderation v2 (новый план, не реализовано)
+
+[PubChat #144](https://github.com/cyrox007/PubChat/issues/144), [ТЗ](https://github.com/cyrox007/PubChat/blob/main/docs/unified-content-moderation-v2.md): общий backend rule engine запрещённых фраз/вариаций/словоформ, mask/reject/hold для доступного серверу plaintext до delivery; AI copilot уже есть, **новый all-surface automatic scan не существует**. SwiftUI report action на самом Space/DM сообщении, личных публикациях, фото, граффити, комментариях, Story, Reel; причины/подтверждение/ошибки/состояние, общий Trust & Safety API.
+
+[Case context #147](https://github.com/cyrox007/PubChat/issues/147) — bounded разрешённые соседние сообщения, privacy claim/permission; для E2EE только reporter-approved decrypted fragment [#148](https://github.com/cyrox007/PubChat/issues/148), без server decryption/backdoor. Нет обязательного server plaintext censorship для E2EE ciphertext — лишь необязательные локальные client hints и безопасный report UX. Native iOS E2EE и Safety Center остаются отдельными P0; не считать их реализованными этой матрицей.
+
+Будущие user wall/posts, multimedia, граффити, Stories/Reels требуют media OCR/ASR/AI/quarantine [#149](https://github.com/cyrox007/PubChat/issues/149), rule admin [#145](https://github.com/cyrox007/PubChat/issues/145), engine [#146](https://github.com/cyrox007/PubChat/issues/146), AI policy [#150](https://github.com/cyrox007/PubChat/issues/150), moderator UX [#151](https://github.com/cyrox007/PubChat/issues/151), реальную Web↔Android↔iOS приёмку [#152](https://github.com/cyrox007/PubChat/issues/152).
+
 ## Очередь незавершённых сквозных сценариев
 
 1. Android **Space invitation inbox → accept/decline → войти** уже реализован и слит ([#56](https://github.com/cyrox007/PubChat-Android/pull/56)); необходимы Android physical QA и Web↔Android cross-client denial/revocation. **Следующее недостающее приложение — iOS**, где нужно реализовать этот сценарий. Не переписывать Android inbox.
