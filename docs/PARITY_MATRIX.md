@@ -28,6 +28,14 @@
 
 Private Multi-Persona selection, friendship hub и TTL availability уже имеют нативные реализации. **Четыре DM consent policy уже доступны в коде обеих мобильных платформ**, однако это не доказывает, что revoke/blocks одинаково работают с реальным Messenger. **Создание Space реализовано в Android**, перенос нужен на iOS, а не повтор на Android.
 
+## Запланированный Social Content / Media (не реализовано)
+
+[PubChat Epic #134](https://github.com/cyrox007/PubChat/issues/134), [ТЗ Social Content & Media v1](https://github.com/cyrox007/PubChat/blob/main/docs/social-content-media-platform-v1.md): личная стена/лента (текст, фото, альбомы, смешанные посты), граффити-рисовалка, видео/музыка/аудио, 24-часовые Stories/Highlights и вертикальные Reels. Shared backend + S3-compatible MediaService и **персональная Account квота** (не на каждую Persona), upload reservation/concurrency, media processing/rights/privacy.
+
+Работы: [#135 S3/quota](https://github.com/cyrox007/PubChat/issues/135), [#136 posts](https://github.com/cyrox007/PubChat/issues/136), [#137 feed](https://github.com/cyrox007/PubChat/issues/137), [#138 graffiti](https://github.com/cyrox007/PubChat/issues/138), [#139 video/music](https://github.com/cyrox007/PubChat/issues/139), [#140 stories](https://github.com/cyrox007/PubChat/issues/140), [#141 reels](https://github.com/cyrox007/PubChat/issues/141), [#142 cross-client acceptance](https://github.com/cyrox007/PubChat/issues/142).
+
+**iOS status: PLANNED.** SwiftUI использует тот же backend API; native touch/Apple Pencil canvas, upload progress, swipe reels, Stories и CDN/media permissions реализуются по будущим PR. Никаких утверждений о готовности без кода/CI/physical iPhone; P0 Safety/E2EE остаются незавершёнными.
+
 ## Очередь незавершённых сквозных сценариев
 
 1. Android **Space invitation inbox → accept/decline → войти** уже реализован и слит ([#56](https://github.com/cyrox007/PubChat-Android/pull/56)); необходимы Android physical QA и Web↔Android cross-client denial/revocation. **Следующее недостающее приложение — iOS**, где нужно реализовать этот сценарий. Не переписывать Android inbox.
