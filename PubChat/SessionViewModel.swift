@@ -1,5 +1,7 @@
 import Foundation
 import SwiftUI
+import UserNotifications
+import UIKit
 
 @MainActor
 final class SessionViewModel: ObservableObject {
@@ -16,6 +18,8 @@ final class SessionViewModel: ObservableObject {
     @Published private(set) var isLoadingDirectory = false
     @Published private(set) var directoryError: String?
     @Published var errorMessage: String?
+    @Published private(set) var nativePushStatus: String?
+    @Published private(set) var nativePushEnabled = false
 
     private let api = PubChatAPI()
 
@@ -67,6 +71,7 @@ final class SessionViewModel: ObservableObject {
         SecureStore.saveSession(accessToken: token, refreshCookie: refreshCookie)
         identity = payload
         state = .signedIn
+        nativePushEnabled = NativePushPreferences.optedIn(accountUID: payload.account!.uid)
     }
 
     func restore() async {
@@ -83,6 +88,7 @@ final class SessionViewModel: ObservableObject {
             }
             identity = profile
             state = .signedIn
+            nativePushEnabled = NativePushPreferences.optedIn(accountUID: profile.account!.uid)
         } catch {
             // An unreachable backend is not proof of revocation. Keep Keychain
             // credentials for a later attempt, but do not expose authenticated UI.
@@ -280,12 +286,90 @@ final class SessionViewModel: ObservableObject {
         // Account-scoped Spaces, DMs and moderation are not separate per Persona.
     }
 
+    func requestNativePushPermission() async {
+        guard state == .signedIn, let account = identity?.account?.uid,
+              let access = SecureStore.accessToken else {
+            nativePushStatus = "Сначала войдите в аккаунт."
+            return
+        }
+        do {
+            let config = try await api.apnsConfiguration(accessToken: access)
+            guard config.status == "ok", config.ios.enabled else {
+                nativePushStatus = "APNs на сервере ещё не настроен. Проверьте APNS_* в backend."
+                return
+            }
+            let authorized = try await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .badge, .sound])
+            guard authorized else {
+                nativePushStatus = "Системные уведомления запрещены. Разрешите их в настройках iPhone."
+                return
+            }
+            NativePushPreferences.remember(true, accountUID: account)
+            nativePushEnabled = true
+            nativePushStatus = "Получаем токен Apple и подключаем уведомления…"
+            UIApplication.shared.registerForRemoteNotifications()
+            if let token = PubChatAppDelegate.latestAPNsToken {
+                await registerNativePushToken(token)
+            }
+        } catch {
+            nativePushStatus = "Не удалось подключить Push: \(error.localizedDescription)"
+        }
+    }
+
+    func restoreNativePushIfOptedIn() {
+        guard state == .signedIn, let account = identity?.account?.uid,
+              NativePushPreferences.optedIn(accountUID: account) else { return }
+        UIApplication.shared.registerForRemoteNotifications()
+        if let token = PubChatAppDelegate.latestAPNsToken {
+            Task { await registerNativePushToken(token) }
+        }
+    }
+
+    func registerNativePushToken(_ token: String) async {
+        guard state == .signedIn, let account = identity?.account?.uid,
+              NativePushPreferences.optedIn(accountUID: account),
+              let access = SecureStore.accessToken else { return }
+        do {
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
+            guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
+                nativePushStatus = "Разрешение на уведомления отключено в iOS."
+                return
+            }
+            try await api.registerAPNsDevice(token: token, accessToken: access)
+            try await api.setAPNsMessagePreferences(true, accessToken: access)
+            nativePushEnabled = true
+            nativePushStatus = "Push для личных сообщений и ответов в Space включён."
+        } catch {
+            nativePushStatus = "Сервер не подтвердил Push: \(error.localizedDescription)"
+        }
+    }
+
+    func disableNativePush() async {
+        guard state == .signedIn, let account = identity?.account?.uid,
+              let access = SecureStore.accessToken else { return }
+        do {
+            try await api.removeAPNsDevice(accessToken: access)
+            // Preferences are Account-wide and may be needed by another Android device.
+            // Only the local iOS installation is revoked.
+            NativePushPreferences.remember(false, accountUID: account)
+            nativePushEnabled = false
+            nativePushStatus = "Это устройство больше не зарегистрировано для Push."
+        } catch {
+            nativePushStatus = "Не удалось отозвать устройство. Повторите при доступной сети."
+        }
+    }
+
     func signOut() async {
         guard !isBusy else { return }
         isBusy = true
         let token = SecureStore.accessToken
         let cookie = SecureStore.refreshCookie
         do {
+            if let token {
+                // Revoke *before* clearing Keychain: otherwise former Account can
+                // continue receiving generic pushes until the installation rebinds.
+                try? await api.removeAPNsDevice(accessToken: token)
+            }
             try await api.logout(accessToken: token, refreshCookie: cookie)
         } catch {
             // Local credentials are still erased; the remote session may remain
@@ -293,6 +377,8 @@ final class SessionViewModel: ObservableObject {
         }
         SecureStore.clearSession()
         identity = nil
+        nativePushEnabled = false
+        nativePushStatus = nil
         spaces = []
         people = []
         errorMessage = nil
