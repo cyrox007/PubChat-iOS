@@ -16,6 +16,12 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: ru.pubchat.app
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_ENTITLEMENTS: PubChat/PubChat.entitlements
+      configs:
+        Debug:
+          APS_ENVIRONMENT: development
+        Release:
+          APS_ENVIRONMENT: production
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: PubChat
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
