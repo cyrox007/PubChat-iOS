@@ -10,6 +10,13 @@ extension Notification.Name {
 /// Handles token callbacks even when the SwiftUI notifications screen is closed.
 final class PubChatAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     static private(set) var latestAPNsToken: String?
+    private static var pendingPushType: String?
+
+    static func consumePushDestination() -> String? {
+        let target = pendingPushType
+        pendingPushType = nil
+        return target
+    }
 
     func application(
         _ application: UIApplication,
@@ -48,6 +55,7 @@ final class PubChatAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificat
         let payload = response.notification.request.content.userInfo
         let type = payload["type"] as? String ?? ""
         if type == "messenger" || type == "space_reply" {
+            Self.pendingPushType = type
             let room = payload["room_uid"] as? String
             let safeRoom = room.flatMap { UUID(uuidString: $0) != nil ? $0 : nil }
             NotificationCenter.default.post(name: .pubChatPushOpened, object: nil,
