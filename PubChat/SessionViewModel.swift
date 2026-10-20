@@ -71,7 +71,7 @@ final class SessionViewModel: ObservableObject {
         SecureStore.saveSession(accessToken: token, refreshCookie: refreshCookie)
         identity = payload
         state = .signedIn
-        nativePushEnabled = NativePushPreferences.optedIn(accountUID: payload.account!.uid)
+        nativePushEnabled = false // A stored opt-in is not a verified current APNs registration.
     }
 
     func restore() async {
@@ -88,7 +88,7 @@ final class SessionViewModel: ObservableObject {
             }
             identity = profile
             state = .signedIn
-            nativePushEnabled = NativePushPreferences.optedIn(accountUID: profile.account!.uid)
+            nativePushEnabled = false // Re-register and await a fresh server acknowledgement.
         } catch {
             // An unreachable backend is not proof of revocation. Keep Keychain
             // credentials for a later attempt, but do not expose authenticated UI.
@@ -305,7 +305,7 @@ final class SessionViewModel: ObservableObject {
                 return
             }
             NativePushPreferences.remember(true, accountUID: account)
-            nativePushEnabled = true
+            nativePushEnabled = false
             nativePushStatus = "Получаем токен Apple и подключаем уведомления…"
             UIApplication.shared.registerForRemoteNotifications()
             if let token = PubChatAppDelegate.latestAPNsToken {
@@ -319,6 +319,7 @@ final class SessionViewModel: ObservableObject {
     func restoreNativePushIfOptedIn() {
         guard state == .signedIn, let account = identity?.account?.uid,
               NativePushPreferences.optedIn(accountUID: account) else { return }
+        nativePushStatus = "Проверяем регистрацию уведомлений…"
         UIApplication.shared.registerForRemoteNotifications()
         if let token = PubChatAppDelegate.latestAPNsToken {
             Task { await registerNativePushToken(token) }
@@ -335,11 +336,18 @@ final class SessionViewModel: ObservableObject {
                 nativePushStatus = "Разрешение на уведомления отключено в iOS."
                 return
             }
+            let config = try await api.apnsConfiguration(accessToken: access)
+            guard config.ios.enabled else {
+                nativePushEnabled = false
+                nativePushStatus = "Сервер APNs отключён. Свяжитесь с администратором."
+                return
+            }
             try await api.registerAPNsDevice(token: token, accessToken: access)
             try await api.setAPNsMessagePreferences(true, accessToken: access)
             nativePushEnabled = true
             nativePushStatus = "Push для личных сообщений и ответов в Space включён."
         } catch {
+            nativePushEnabled = false
             nativePushStatus = "Сервер не подтвердил Push: \(error.localizedDescription)"
         }
     }
