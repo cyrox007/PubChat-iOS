@@ -32,7 +32,7 @@ Android-клиент: [cyrox007/PubChat-Android](https://github.com/cyrox007/Pub
 
 **Пока отсутствуют:** полноценное участие в Spaces/realtime,
 Messenger/E2EE, Activities/игры, Reputation/achievements, Safety,
-другие настройки приватности, APNs, WebRTC calls, редактирование Persona,
+другие настройки приватности, физическая проверка APNs и точные deeplink Space-сообщений, WebRTC calls, редактирование Persona,
 монетизация и восстановление сессий при сетевых сбоях на уровне production.
 Все эти пользовательские сценарии должны получить паритет перед 1.0.
 
