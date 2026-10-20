@@ -17,7 +17,7 @@
 | Spaces realtime/history/management | Код | Код (не полная Web parity) | **Нет** | iOS полноценное участие |
 | Activities/игры/повторы | Код | Частично | Нет | Cross-client recurring/timezone |
 | Messenger DM basics | Код | Код (частично) | Начальный Messenger, неполный parity | Медиаполитика, offline/reconnect, consent |
-| **E2EE DM** | Web security policy | **Нет полноценного native E2EE** | **Нет** | P0: device crypto, no plaintext fallback, verification |
+| **E2EE DM** | Web policy + HTTP no-downgrade [#131](https://github.com/cyrox007/PubChat/pull/131), `8e5219e` | **Защитный gate [#58](https://github.com/cyrox007/PubChat-Android/pull/58), `103ecb1` слит**: нет plaintext downgrade; полноценной native E2EE криптографии **нет** ([#59](https://github.com/cyrox007/PubChat-Android/issues/59)) | Начальный policy/fail-closed UI, native E2EE криптография **отсутствует** | P0: per-device keys, verification, encrypted send/decrypt, physical cross-client tests |
 | Calls WebRTC | Код | Частично | Нет | Физический network/media QA |
 | Notifications | Web Push/preferences | FCM foundation | Activity UI, APNs отсутствует | Provider и real-device delivery |
 | **Safety Center/appeals** | Web + Trust & Safety | Нет полного flow | Нет полного flow | P0 user safety |
@@ -31,7 +31,7 @@ Private Multi-Persona selection, friendship hub и TTL availability уже им�
 ## Очередь незавершённых сквозных сценариев
 
 1. Android **Space invitation inbox → accept/decline → войти** уже реализован и слит ([#56](https://github.com/cyrox007/PubChat-Android/pull/56)); необходимы Android physical QA и Web↔Android cross-client denial/revocation. **Следующее недостающее приложение — iOS**, где нужно реализовать этот сценарий. Не переписывать Android inbox.
-2. **E2EE Messenger** для нативных клиентов: при required E2EE отправка без device keys/verification должна fail-closed; запрещена тихая замена plaintext.
+2. **E2EE Messenger** для нативных клиентов: серверный HTTP/WS downgrade закрыт [#131](https://github.com/cyrox007/PubChat/pull/131), Android legacy plaintext gate слит [#58](https://github.com/cyrox007/PubChat-Android/pull/58). **Следующий незавершённый этап — полноценные E2EE ключи/шифрование/дешифрование и проверка устройств** ([Android #59](https://github.com/cyrox007/PubChat-Android/issues/59)); текущий fail-closed UI — не криптографическая готовность.
 3. **Safety Center**: жалобы, история, ограничения и апелляции с server-only правами и privacy projection.
 4. iOS **Spaces participation/realtime и create flow**, затем Activities/notifications/calls.
 5. Social Core 0.7: публичные Multi-Persona identities, block/revoke tests и device-to-device parity.
