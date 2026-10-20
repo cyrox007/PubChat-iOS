@@ -28,6 +28,8 @@ Android-клиент: [cyrox007/PubChat-Android](https://github.com/cyrox007/Pub
 - CI на GitHub-hosted `macos-26`: XcodeGen, simulator build, XCTest без подписи;
 - базовые тесты контракта авторизации и парсинга refresh cookie.
 
+**Теперь реализована база APNs:** явное разрешение iOS, регистрация APNs-токена в общей серверной очереди, фоновые системные уведомления о DM и ответах Space, отличающиеся короткие локальные звуки, отзыв установки при выходе. **Это код/контракт, не подтверждённая реальная доставка**: требуются Apple Developer Push capability, подписанный iPhone build, серверные APNS_* ключи, включённый worker timer и испытания на физическом iPhone. Отдельно остаётся навигация до конкретного сообщения Space, сейчас Push открывает вкладку Spaces.
+
 **Пока отсутствуют:** полноценное участие в Spaces/realtime,
 Messenger/E2EE, Activities/игры, Reputation/achievements, Safety,
 другие настройки приватности, APNs, WebRTC calls, редактирование Persona,
