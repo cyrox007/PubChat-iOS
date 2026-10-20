@@ -345,6 +345,12 @@ private struct MainTabsView: View {
             .tabItem { Label("Профиль", systemImage: "person.crop.circle.fill") }
             .tag(4)
         }
+        .onAppear {
+            if let type = PubChatAppDelegate.consumePushDestination() {
+                if type == "messenger" { selectedTab = 2 }
+                if type == "space_reply" { selectedTab = 0 }
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .pubChatPushOpened)) { signal in
             let type = signal.userInfo?["type"] as? String
             if type == "messenger" { selectedTab = 2 }
