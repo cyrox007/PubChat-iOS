@@ -20,6 +20,14 @@ final class PubChatTests: XCTestCase {
         XCTAssertTrue(preferences.preferences.nativePushSpace)
     }
 
+    func testDistinctAPNsNotificationSoundsAreBundled() {
+        let privateURL = Bundle.main.url(forResource: "pubchat_private", withExtension: "wav")
+        let spaceURL = Bundle.main.url(forResource: "pubchat_space", withExtension: "wav")
+        XCTAssertNotNil(privateURL, "iOS push sound for personal messages must be packaged")
+        XCTAssertNotNil(spaceURL, "iOS push sound for Space replies must be packaged")
+        XCTAssertNotEqual(privateURL, spaceURL)
+    }
+
     func testNativePushOptInNeverLeaksBetweenAccounts() throws {
         let a = "11111111-1111-4111-8111-111111111111"
         let b = "22222222-2222-4222-8222-222222222222"
