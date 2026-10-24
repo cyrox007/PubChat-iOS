@@ -127,7 +127,6 @@ private struct AuthenticationView: View {
                             Text(passwordsMatch ? "✓ Пароли совпадают" : "Пароли не совпадают")
                                 .font(.caption)
                                 .foregroundStyle(passwordsMatch ? .green : .red)
-                                .accessibilityAddTraits(.updatesFrequently)
                         }
                     }
                 }
