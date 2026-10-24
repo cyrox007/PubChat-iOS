@@ -27,7 +27,31 @@ private struct AuthenticationView: View {
     @State private var displayName = ""
     @State private var email = ""
     @State private var password = ""
+    @State private var passwordConfirmation = ""
     @State private var intent = "open"
+
+    private var passwordStrength: Int {
+        guard !password.isEmpty else { return 0 }
+        let characters = Array(password)
+        var score = password.count >= 8 ? 1 : 0
+        if password.count >= 12 { score += 1 }
+        if characters.contains(where: { $0.isLowercase }) &&
+            characters.contains(where: { $0.isUppercase }) { score += 1 }
+        if characters.contains(where: { $0.isNumber }) &&
+            characters.contains(where: { !$0.isLetter && !$0.isNumber && !$0.isWhitespace }) {
+            score += 1
+        }
+        return score
+    }
+
+    private var passwordsMatch: Bool {
+        !passwordConfirmation.isEmpty && password == passwordConfirmation
+    }
+
+    private var registrationReady: Bool {
+        handle.range(of: "^[A-Za-z0-9_.]{3,32}$", options: .regularExpression) != nil &&
+            password.count >= 8 && password.count <= 128 && passwordsMatch
+    }
 
     private let intents = [
         ("open", "Открыт к общению"),
@@ -87,6 +111,24 @@ private struct AuthenticationView: View {
                     }
                     SecureField("Пароль", text: $password)
                         .textContentType(registering ? .newPassword : .password)
+                    if registering {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ProgressView(value: Double(passwordStrength), total: 4)
+                                .accessibilityLabel("Надёжность пароля")
+                            Text("Надёжность: " + ["Не задана", "Низкая", "Средняя", "Хорошая", "Высокая"][passwordStrength])
+                                .font(.caption).foregroundStyle(.secondary)
+                            if !password.isEmpty && password.count < 8 {
+                                Text("Минимум 8 символов").font(.caption).foregroundStyle(.red)
+                            }
+                        }
+                        SecureField("Повтор пароля", text: $passwordConfirmation)
+                            .textContentType(.newPassword)
+                        if !passwordConfirmation.isEmpty {
+                            Text(passwordsMatch ? "✓ Пароли совпадают" : "Пароли не совпадают")
+                                .font(.caption)
+                                .foregroundStyle(passwordsMatch ? .green : .red)
+                        }
+                    }
                 }
 
                 if let error = session.errorMessage {
@@ -122,7 +164,7 @@ private struct AuthenticationView: View {
                     .disabled(
                         session.isBusy ||
                         password.isEmpty ||
-                        (registering ? handle.trimmingCharacters(in: .whitespaces).count < 3 : identifier.isEmpty)
+                        (registering ? !registrationReady : identifier.isEmpty)
                     )
                 }
             }
