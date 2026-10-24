@@ -28,6 +28,19 @@ final class PubChatAPI {
         return (result, cookie)
     }
 
+    private struct HandleAvailabilityResponse: Decodable {
+        let available: Bool
+    }
+
+    func isHandleAvailable(_ handle: String) async throws -> Bool {
+        guard let encoded = handle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw APIProblem(status: -1, reason: "Некорректный username")
+        }
+        let (result, _): (HandleAvailabilityResponse, String?) =
+            try await request("GET", "/identity/v2/handle-availability?handle=\(encoded)")
+        return result.available
+    }
+
     func register(_ payload: RegisterPayload) async throws -> (IdentityEnvelope, String) {
         let body = try JSONEncoder().encode(payload)
         let (result, cookie): (IdentityEnvelope, String?) =
