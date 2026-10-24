@@ -28,6 +28,9 @@ private struct AuthenticationView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var passwordConfirmation = ""
+    @State private var handleAvailability: Bool?
+    @State private var checkingHandle = false
+    @State private var handleCheckFailed = false
     @State private var intent = "open"
 
     private var passwordStrength: Int {
@@ -50,6 +53,7 @@ private struct AuthenticationView: View {
 
     private var registrationReady: Bool {
         handle.range(of: "^[A-Za-z0-9_.]{3,32}$", options: .regularExpression) != nil &&
+            handleAvailability != false && !checkingHandle &&
             password.count >= 8 && password.count <= 128 && passwordsMatch
     }
 
@@ -94,6 +98,42 @@ private struct AuthenticationView: View {
                         TextField("Handle", text: $handle)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
+                            .task(id: handle) {
+                                handleAvailability = nil
+                                handleCheckFailed = false
+                                checkingHandle = false
+                                let candidate = handle.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard candidate.range(of: "^[A-Za-z0-9_.]{3,32}$",
+                                    options: .regularExpression) != nil else { return }
+                                checkingHandle = true
+                                do {
+                                    try await Task.sleep(for: .milliseconds(450))
+                                    try Task.checkCancellation()
+                                    let available = try await PubChatAPI().isHandleAvailable(candidate)
+                                    try Task.checkCancellation()
+                                    if handle == candidate {
+                                        handleAvailability = available
+                                        checkingHandle = false
+                                    }
+                                } catch is CancellationError {
+                                    // A newer input superseded this request.
+                                } catch {
+                                    if handle == candidate {
+                                        handleCheckFailed = true
+                                        checkingHandle = false
+                                    }
+                                }
+                            }
+                        if checkingHandle {
+                            Text("Проверяем username…").font(.caption).foregroundStyle(.secondary)
+                        } else if handleAvailability == false {
+                            Text("Этот username занят").font(.caption).foregroundStyle(.red)
+                        } else if handleAvailability == true {
+                            Text("✓ Username предварительно свободен").font(.caption).foregroundStyle(.green)
+                        } else if handleCheckFailed {
+                            Text("Не удалось проверить; окончательная проверка при регистрации")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                         TextField("Отображаемое имя", text: $displayName)
                         TextField("Email (необязательно)", text: $email)
                             .textContentType(.emailAddress)
