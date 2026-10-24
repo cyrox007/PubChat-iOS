@@ -51,9 +51,16 @@ private struct AuthenticationView: View {
         !passwordConfirmation.isEmpty && password == passwordConfirmation
     }
 
+    private var emailValid: Bool {
+        let candidate = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if candidate.isEmpty { return true }
+        return candidate.count <= 254 &&
+            candidate.range(of: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", options: .regularExpression) != nil
+    }
+
     private var registrationReady: Bool {
         handle.range(of: "^[A-Za-z0-9_.]{3,32}$", options: .regularExpression) != nil &&
-            handleAvailability != false && !checkingHandle &&
+            handleAvailability != false && !checkingHandle && emailValid &&
             password.count >= 8 && password.count <= 128 && passwordsMatch
     }
 
@@ -139,6 +146,11 @@ private struct AuthenticationView: View {
                             .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
+                        if !email.isEmpty {
+                            Text(emailValid ? "✓ Формат email корректен" : "Проверьте формат email")
+                                .font(.caption)
+                                .foregroundStyle(emailValid ? .green : .red)
+                        }
                         Picker("Цель общения", selection: $intent) {
                             ForEach(intents.indices, id: \.self) { index in
                                 Text(intents[index].1).tag(intents[index].0)
