@@ -169,7 +169,7 @@ private struct MessengerConversationView: View {
                         LazyVStack(spacing: 10) {
                             ForEach(messenger.messages) { message in
                                 MessengerBubble(message: message, own: messenger.isMine(message))
-                                    .id(message.uid)
+                                    .id(message.id)
                             }
                         }
                         .padding(.horizontal, 14)
@@ -177,7 +177,7 @@ private struct MessengerConversationView: View {
                     }
                     .scrollDismissesKeyboard(.interactively)
                     .defaultScrollAnchor(.bottom)
-                    .onChange(of: messenger.messages.last?.uid) { _, lastID in
+                    .onChange(of: messenger.messages.last?.id) { _, lastID in
                         guard let lastID else { return }
                         withAnimation(.easeOut(duration: 0.18)) {
                             scroll.scrollTo(lastID, anchor: .bottom)
@@ -234,7 +234,7 @@ private struct MessengerConversationView: View {
                                         in: RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(messenger.sending ? "Ожидаем подтверждения" : "Отправить сообщение")
+                        .accessibilityLabel(messenger.sending ? "Ожидаем подтверждения" : "Отправить или повторить с тем же ID")
                         .disabled(!messenger.canSend)
                         .opacity(messenger.canSend || messenger.sending ? 1 : 0.48)
                     }
@@ -282,7 +282,8 @@ private struct MessengerBubble: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if own {
-                    Text(message.isRead ? "✓✓ Прочитано" : "✓ Отправлено")
+                    Text(message.isOptimistic ? "⏳ Ожидает подтверждения" :
+                        message.isRead ? "✓✓ Прочитано" : "✓ Сохранено на сервере")
                         .font(.caption)
                         .foregroundStyle(PubChatDesign.secondaryInk)
                         .frame(maxWidth: .infinity, alignment: .trailing)
