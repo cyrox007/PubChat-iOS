@@ -25,6 +25,7 @@ final class MessengerViewModel: ObservableObject {
     private var heartbeatTask: Task<Void, Never>?
     private var pendingFrontID: String?
     private var pendingText: String?
+    private var pendingPeerUID: String?
 
     func isMine(_ message: MessengerMessage) -> Bool { message.senderUID == accountUID }
 
@@ -63,6 +64,7 @@ final class MessengerViewModel: ObservableObject {
         encryption = nil
         pendingFrontID = nil
         pendingText = nil
+        pendingPeerUID = nil
         sending = false
         draft = ""
         connection = "idle"
@@ -121,11 +123,26 @@ final class MessengerViewModel: ObservableObject {
             errorText = "Сообщение не должно превышать 1000 символов."
             return
         }
-        let frontID = UUID().uuidString.lowercased()
+        if let pendingText, let pendingPeerUID,
+           (pendingText != text || pendingPeerUID != peerUID) {
+            errorText = "Есть неподтверждённая отправка. Повторите тот же текст в том же диалоге."
+            return
+        }
+        let frontID = pendingFrontID ?? UUID().uuidString.lowercased()
         pendingFrontID = frontID
         pendingText = text
+        pendingPeerUID = peerUID
         sending = true
         errorText = nil
+        // The optimistic row must have the same stable identity when the
+        // backend echoes its persisted canonical UID after a reconnect.
+        if let accountUID, !messages.contains(where: { $0.frontId == frontID }) {
+            messages.append(MessengerMessage(
+                uid: "local:\(frontID)", frontId: frontID, content: text, contentType: "text",
+                senderUID: accountUID, receiverUID: peerUID, isRead: false,
+                createdAt: ISO8601DateFormatter().string(from: Date())
+            ))
+        }
         do {
             try await sendFrame([
                 "action": "send_message", "frontId": frontID,
@@ -134,13 +151,15 @@ final class MessengerViewModel: ObservableObject {
             ])
             // A socket write is NOT an acknowledgement: do not clear the draft.
         } catch {
-            failPending("Не удалось отправить сообщение. \(error.localizedDescription)")
+            sending = false
+            errorText = "Нет подтверждения отправки. Повторите тот же текст с прежним ID после восстановления связи. \(error.localizedDescription)"
         }
     }
 
     private func failPending(_ message: String) {
         pendingFrontID = nil
         pendingText = nil
+        pendingPeerUID = nil
         sending = false
         errorText = message
     }
@@ -195,7 +214,8 @@ final class MessengerViewModel: ObservableObject {
             currentSocket?.cancel(with: .normalClosure, reason: nil)
             if socket === currentSocket { socket = nil }
             if pendingFrontID != nil {
-                failPending("Нет подтверждения отправки. Проверьте историю перед повтором: автоматическая повторная отправка отключена.")
+                sending = false
+                errorText = "Нет подтверждения отправки. История будет сверена после подключения; повтор сохраняет тот же ID."
             }
             guard isRunning, generation == epoch, !Task.isCancelled, connection != "restricted" else { break }
             failures += 1
@@ -240,33 +260,44 @@ final class MessengerViewModel: ObservableObject {
                   selectedDialog?.partnerID == peerUID,
                   let payload = frame["messages"] as? [[String: Any]] else { return }
             let decoded = payload.compactMap(Self.message)
-            // Deduplicate history and realtime arrivals; server returns newest first.
-            var indexed = Dictionary(uniqueKeysWithValues: messages.map { ($0.uid, $0) })
-            for message in decoded { indexed[message.uid] = message }
-            messages = indexed.values.sorted { $0.createdAt < $1.createdAt }
+            // Reconcile by canonical uid OR stable client frontId. Preserve
+            // an unresolved optimistic row outside the limited history window.
+            let pendingRows = messages.filter(\.isOptimistic)
+            messages = decoded.sorted { $0.createdAt < $1.createdAt }
+            for local in pendingRows where !messages.contains(where: {
+                $0.uid == local.uid ||
+                ($0.frontId != nil && $0.frontId == local.frontId && $0.senderUID == local.senderUID)
+            }) {
+                messages.append(local)
+            }
+            for message in decoded { confirmPendingIfSaved(message) }
+            messages.sort { $0.createdAt < $1.createdAt }
             loadingConversation = false
         case "private_message":
             guard let message = Self.message(frame) else { return }
             if let accountUID, let peerUID = selectedDialog?.partnerID,
                (message.senderUID == accountUID && message.receiverUID == peerUID ||
                 message.senderUID == peerUID && message.receiverUID == accountUID) {
-                if let i = messages.firstIndex(where: { $0.uid == message.uid }) {
+                if let i = messages.firstIndex(where: { old in
+                    old.uid == message.uid || (old.frontId != nil &&
+                    old.frontId == message.frontId && old.senderUID == message.senderUID)
+                }) {
                     messages[i] = message
                 } else {
                     messages.append(message)
-                    messages.sort { $0.createdAt < $1.createdAt }
                 }
+                messages.sort { $0.createdAt < $1.createdAt }
                 if message.senderUID != accountUID {
                     try? await sendFrame(["action": "mark_message_as_read", "message_uid": message.uid])
                 }
             }
-            if message.senderUID == accountUID,
-               let id = frame["frontId"] as? String, id == pendingFrontID {
-                if draft.trimmingCharacters(in: .whitespacesAndNewlines) == pendingText { draft = "" }
-                pendingFrontID = nil
-                pendingText = nil
+            confirmPendingIfSaved(message)
+        case "duplicate_pending", "duplicate_ignored":
+            // A Redis claim is not a durable ACK. Keep the same pending ID;
+            // history reconciliation may still discover an already saved row.
+            if (frame["frontId"] as? String) == pendingFrontID {
                 sending = false
-                Task { await refreshDialogs() }
+                errorText = "Результат отправки пока неизвестен. Сверьте историю и повторите тот же текст."
             }
         case "error", "rate_limited":
             let id = frame["frontId"] as? String
@@ -278,10 +309,26 @@ final class MessengerViewModel: ObservableObject {
             case "rate_limited": message = "Слишком много сообщений. Попробуйте позже."
             default: message = "Сервер отклонил действие: \(kind)."
             }
-            if id != nil && id == pendingFrontID { failPending(message) }
+            if id != nil && id == pendingFrontID {
+                messages.removeAll { $0.frontId == id && $0.isOptimistic }
+                failPending(message)
+            }
             else { errorText = message; if kind == "conversation_failed" { loadingConversation = false } }
         default: break
         }
+    }
+
+    private func confirmPendingIfSaved(_ message: MessengerMessage) {
+        guard !message.isOptimistic, message.senderUID == accountUID,
+              message.frontId != nil, message.frontId == pendingFrontID,
+              message.receiverUID == pendingPeerUID else { return }
+        if draft.trimmingCharacters(in: .whitespacesAndNewlines) == pendingText { draft = "" }
+        pendingFrontID = nil
+        pendingText = nil
+        pendingPeerUID = nil
+        sending = false
+        errorText = nil
+        Task { await refreshDialogs() }
     }
 
     private func requestConversation(_ peerUID: String) async throws {

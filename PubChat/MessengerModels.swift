@@ -63,6 +63,7 @@ struct MessengerTicket: Decodable {
 /// Ciphertext is not rendered as a plaintext message.
 struct MessengerMessage: Decodable, Identifiable {
     let uid: String
+    let frontId: String?
     let content: String?
     let contentType: String
     let senderUID: String
@@ -70,7 +71,8 @@ struct MessengerMessage: Decodable, Identifiable {
     let isRead: Bool
     let createdAt: String
 
-    var id: String { uid }
+    var id: String { frontId ?? uid }
+    var isOptimistic: Bool { uid.hasPrefix("local:") }
     var supportsText: Bool { contentType == "text" }
     var visibleText: String {
         switch contentType {
@@ -85,6 +87,7 @@ struct MessengerMessage: Decodable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case uid, content
+        case frontId
         case contentType = "content_type"
         case senderUID = "sender_uid"
         case receiverUID = "receiver_uid"

@@ -123,6 +123,28 @@ final class PubChatTests: XCTestCase {
         XCTAssertEqual(policy.encryption.systemPolicy, "required")
     }
 
+    func testMessengerFrontIdIsStableAcrossOptimisticAndCanonicalAck() throws {
+        let server = """
+        {"uid":"server-uid","frontId":"stable-abc","content":"hello","content_type":"text",
+        "sender_uid":"account-a","receiver_uid":"account-b","is_read":false,
+        "created_at":"2026-10-27T07:00:00"}
+        """
+        let decoded = try JSONDecoder().decode(MessengerMessage.self, from: Data(server.utf8))
+        XCTAssertEqual(decoded.uid, "server-uid")
+        XCTAssertEqual(decoded.frontId, "stable-abc")
+        XCTAssertEqual(decoded.id, "stable-abc")
+        XCTAssertFalse(decoded.isOptimistic)
+
+        let pending = MessengerMessage(
+            uid: "local:stable-abc", frontId: "stable-abc",
+            content: "hello", contentType: "text", senderUID: "account-a",
+            receiverUID: "account-b", isRead: false,
+            createdAt: "2026-10-27T07:00:00"
+        )
+        XCTAssertTrue(pending.isOptimistic)
+        XCTAssertEqual(pending.id, decoded.id)
+    }
+
     func testMessengerServerConfirmedMessagesHaveSafeTypeProjection() throws {
         let encrypted = """
         {"uid":"m1","content":"ciphertext-not-to-be-shown","content_type":"e2ee",
