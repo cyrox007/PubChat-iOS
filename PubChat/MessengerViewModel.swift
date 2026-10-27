@@ -25,6 +25,7 @@ final class MessengerViewModel: ObservableObject {
     private var heartbeatTask: Task<Void, Never>?
     private var pendingFrontID: String?
     private var pendingText: String?
+    private var pendingPeerUID: String?
 
     func isMine(_ message: MessengerMessage) -> Bool { message.senderUID == accountUID }
 
@@ -63,6 +64,7 @@ final class MessengerViewModel: ObservableObject {
         encryption = nil
         pendingFrontID = nil
         pendingText = nil
+        pendingPeerUID = nil
         sending = false
         draft = ""
         connection = "idle"
@@ -121,11 +123,26 @@ final class MessengerViewModel: ObservableObject {
             errorText = "Сообщение не должно превышать 1000 символов."
             return
         }
-        let frontID = UUID().uuidString.lowercased()
+        if let pendingText, let pendingPeerUID,
+           (pendingText != text || pendingPeerUID != peerUID) {
+            errorText = "Есть неподтверждённая отправка. Повторите тот же текст в том же диалоге."
+            return
+        }
+        let frontID = pendingFrontID ?? UUID().uuidString.lowercased()
         pendingFrontID = frontID
         pendingText = text
+        pendingPeerUID = peerUID
         sending = true
         errorText = nil
+        // The optimistic row must have the same stable identity when the
+        // backend echoes its persisted canonical UID after a reconnect.
+        if let accountUID, !messages.contains(where: { $0.frontId == frontID }) {
+            messages.append(MessengerMessage(
+                uid: "local:\(frontID)", frontId: frontID, content: text, contentType: "text",
+                senderUID: accountUID, receiverUID: peerUID, isRead: false,
+                createdAt: ISO8601DateFormatter().string(from: Date())
+            ))
+        }
         do {
             try await sendFrame([
                 "action": "send_message", "frontId": frontID,
@@ -134,13 +151,15 @@ final class MessengerViewModel: ObservableObject {
             ])
             // A socket write is NOT an acknowledgement: do not clear the draft.
         } catch {
-            failPending("Не удалось отправить сообщение. \(error.localizedDescription)")
+            sending = false
+            errorText = "Нет подтверждения отправки. Повторите тот же текст с прежним ID после восстановления связи. \(error.localizedDescription)"
         }
     }
 
     private func failPending(_ message: String) {
         pendingFrontID = nil
         pendingText = nil
+        pendingPeerUID = nil
         sending = false
         errorText = message
     }
@@ -195,7 +214,8 @@ final class MessengerViewModel: ObservableObject {
             currentSocket?.cancel(with: .normalClosure, reason: nil)
             if socket === currentSocket { socket = nil }
             if pendingFrontID != nil {
-                failPending("Нет подтверждения отправки. Проверьте историю перед повтором: автоматическая повторная отправка отключена.")
+                sending = false
+                errorText = "Нет подтверждения отправки. История будет сверена после подключения; повтор сохраняет тот же ID."
             }
             guard isRunning, generation == epoch, !Task.isCancelled, connection != "restricted" else { break }
             failures += 1
