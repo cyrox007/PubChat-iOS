@@ -260,33 +260,44 @@ final class MessengerViewModel: ObservableObject {
                   selectedDialog?.partnerID == peerUID,
                   let payload = frame["messages"] as? [[String: Any]] else { return }
             let decoded = payload.compactMap(Self.message)
-            // Deduplicate history and realtime arrivals; server returns newest first.
-            var indexed = Dictionary(uniqueKeysWithValues: messages.map { ($0.uid, $0) })
-            for message in decoded { indexed[message.uid] = message }
-            messages = indexed.values.sorted { $0.createdAt < $1.createdAt }
+            // Reconcile by canonical uid OR stable client frontId. Preserve
+            // an unresolved optimistic row outside the limited history window.
+            let pendingRows = messages.filter(\.isOptimistic)
+            messages = decoded.sorted { $0.createdAt < $1.createdAt }
+            for local in pendingRows where !messages.contains(where: {
+                $0.uid == local.uid ||
+                ($0.frontId != nil && $0.frontId == local.frontId && $0.senderUID == local.senderUID)
+            }) {
+                messages.append(local)
+            }
+            for message in decoded { confirmPendingIfSaved(message) }
+            messages.sort { $0.createdAt < $1.createdAt }
             loadingConversation = false
         case "private_message":
             guard let message = Self.message(frame) else { return }
             if let accountUID, let peerUID = selectedDialog?.partnerID,
                (message.senderUID == accountUID && message.receiverUID == peerUID ||
                 message.senderUID == peerUID && message.receiverUID == accountUID) {
-                if let i = messages.firstIndex(where: { $0.uid == message.uid }) {
+                if let i = messages.firstIndex(where: { old in
+                    old.uid == message.uid || (old.frontId != nil &&
+                    old.frontId == message.frontId && old.senderUID == message.senderUID)
+                }) {
                     messages[i] = message
                 } else {
                     messages.append(message)
-                    messages.sort { $0.createdAt < $1.createdAt }
                 }
+                messages.sort { $0.createdAt < $1.createdAt }
                 if message.senderUID != accountUID {
                     try? await sendFrame(["action": "mark_message_as_read", "message_uid": message.uid])
                 }
             }
-            if message.senderUID == accountUID,
-               let id = frame["frontId"] as? String, id == pendingFrontID {
-                if draft.trimmingCharacters(in: .whitespacesAndNewlines) == pendingText { draft = "" }
-                pendingFrontID = nil
-                pendingText = nil
+            confirmPendingIfSaved(message)
+        case "duplicate_pending", "duplicate_ignored":
+            // A Redis claim is not a durable ACK. Keep the same pending ID;
+            // history reconciliation may still discover an already saved row.
+            if (frame["frontId"] as? String) == pendingFrontID {
                 sending = false
-                Task { await refreshDialogs() }
+                errorText = "Результат отправки пока неизвестен. Сверьте историю и повторите тот же текст."
             }
         case "error", "rate_limited":
             let id = frame["frontId"] as? String
@@ -298,10 +309,26 @@ final class MessengerViewModel: ObservableObject {
             case "rate_limited": message = "Слишком много сообщений. Попробуйте позже."
             default: message = "Сервер отклонил действие: \(kind)."
             }
-            if id != nil && id == pendingFrontID { failPending(message) }
+            if id != nil && id == pendingFrontID {
+                messages.removeAll { $0.frontId == id && $0.isOptimistic }
+                failPending(message)
+            }
             else { errorText = message; if kind == "conversation_failed" { loadingConversation = false } }
         default: break
         }
+    }
+
+    private func confirmPendingIfSaved(_ message: MessengerMessage) {
+        guard !message.isOptimistic, message.senderUID == accountUID,
+              message.frontId != nil, message.frontId == pendingFrontID,
+              message.receiverUID == pendingPeerUID else { return }
+        if draft.trimmingCharacters(in: .whitespacesAndNewlines) == pendingText { draft = "" }
+        pendingFrontID = nil
+        pendingText = nil
+        pendingPeerUID = nil
+        sending = false
+        errorText = nil
+        Task { await refreshDialogs() }
     }
 
     private func requestConversation(_ peerUID: String) async throws {
